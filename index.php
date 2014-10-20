@@ -1,6 +1,8 @@
 <?php
 
 define('DECIMALS', 0);
+require '../db.php';
+date_default_timezone_set('America/Indiana/Indianapolis');
 
 if ($_POST) {
 
@@ -205,7 +207,6 @@ function array_pluck($key, $rows) {
   return $values;
 }
 
-
 class api {
   protected $class;
   private static $static_mysqli;
@@ -216,10 +217,10 @@ class api {
     $this->class = get_class($this);
     if (!isset(self::$static_mysqli)) {
       self::$static_mysqli = my_mysqli::get_instance(
-        'localhost',
-        'root',
-        'password',
-        'ww'
+        DB_HOST,
+        DB_USER,
+        DB_PASS,
+        DB_NAME
       );
     }
     $this->mysqli = self::$static_mysqli;
@@ -457,8 +458,8 @@ class multiple {
   }
   private function results($results) {
     if (
-      isset($results['food']) and 
-      !isset($results['food']['food_id']) and 
+      isset($results['food']) and
+      !isset($results['food']['food_id']) and
       isset($results['track'])
     ) {
       $units = array();
