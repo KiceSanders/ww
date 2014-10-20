@@ -1,5 +1,7 @@
 <?php
 
+ob_start('ob_gzhandler');
+
 define('DECIMALS', 0);
 require '../db.php';
 date_default_timezone_set('America/Indiana/Indianapolis');
