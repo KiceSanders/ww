@@ -461,11 +461,36 @@ layer.home.prototype.render_tracks = function(parent) {
       sorted.push(this.data.track[track_id]);
     }
   }
+  var rendered = {};
   $.sort(sorted, 'time');
   for (var i = 0; sorted[i]; ++i) {
+    this.render_track_header(container, sorted[i], rendered);
     this.render_track(container, sorted[i]);
   }
   parent.appendChild(container);
+};
+layer.home.prototype.render_track_header = function(parent, track, rendered) {
+  var container = $.createElement('div').style({
+    'background-color': '#eeeeee',
+    'padding': '5px 10px',
+    'color': 'gray',
+    'font-size': 10
+  });
+  var headers = {
+    '11': 'Breakfast',
+    '16': 'Lunch',
+    '20': 'Dinner',
+    '24': 'Dessert'
+  };
+  for (var hour in headers) {
+    if (track.time < hour) {
+      if (!rendered[headers[hour]]) {
+        rendered[headers[hour]] = true;
+        parent.appendChild(container.innerHTML(headers[hour]));
+      }
+      break;
+    }
+  }
 };
 layer.home.prototype.render_track = function(parent, track) {
   var container = $.createElement('div').style({
@@ -896,6 +921,8 @@ layer.create_food.prototype.render_loaded = function(parent) {
   container.appendChild(table);
   this.render_name(container);
   this.render_serving(container);
+  this.quantity_whole.value(1);
+  this.units.value('serving');
   this.render_create_track(container);
   parent.appendChild(container);
 };
@@ -1495,6 +1522,11 @@ layer.quick_add.prototype.render_points = function(parent) {
   container.appendChild(table);
   parent.appendChild(container);
 };
+
+
+
+layer.create_recipe = function() {};
+rocket.inherits(layer.create_recipe, layer.food);
 
 
 
