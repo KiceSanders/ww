@@ -3,7 +3,7 @@
 ob_start('ob_gzhandler');
 
 define('DECIMALS', 0);
-require '../db.php';
+
 date_default_timezone_set('America/Indiana/Indianapolis');
 
 if ($_POST) {
@@ -218,6 +218,7 @@ class api {
   public function __construct() {
     $this->class = get_class($this);
     if (!isset(self::$static_mysqli)) {
+      require_once '../db.php';
       self::$static_mysqli = my_mysqli::get_instance(
         DB_HOST,
         DB_USER,
@@ -383,10 +384,11 @@ class user extends crud {
       $results['points'][$date] = 0;
       foreach ($results['track'] as $track_id => $track) {
         if ($track['date'] === $date) {
-          $results['points'][$date] += $track['points'];
           if ($track['points'] < 0) {
             $activity_points += -1 * $track['points'];
             $activity_points_remaining += -1 * $track['points'];
+          } else {
+            $results['points'][$date] += $track['points'];
           }
         }
       }

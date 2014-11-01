@@ -117,7 +117,7 @@ layer.user_picker.prototype.render_submit = function(parent) {
     if (self.username.value()) {
       api('user', 'get', {'username': self.username.value()}, function(data) {
         if (data) {
-          $.cookie('username', self.username.value());
+          $.cookie('username', self.username.value(), 90);
           go_home();
         } else {
           document.location.hash = '#/user_creator/' + self.username.value() + '/';
@@ -222,7 +222,7 @@ layer.user_creator.prototype.render_create = function(parent) {
       'gender': self.gender.value(),
       'date_of_birth': self.date_of_birth.value()
     }, function() {
-      $.cookie('username', self.username.value());
+      $.cookie('username', self.username.value(), 90);
       go_home();
     });
   });
@@ -479,7 +479,7 @@ layer.home.prototype.render_track_header = function(parent, track, rendered) {
   var headers = {
     '11': 'Breakfast',
     '16': 'Lunch',
-    '20': 'Dinner',
+    '22': 'Dinner',
     '24': 'Dessert'
   };
   for (var hour in headers) {
@@ -972,7 +972,7 @@ layer.create_food.prototype.render_parameter = function(parent, field) {
 
 
 layer.add_food = function() {};
-rocket.inherits(layer.add_food, layer.menu);
+rocket.inherits(layer.add_food, layer.food);
 layer.add_food.prototype.render_contents = function(parent) {
   if (this.data) {
     this.render_loaded(parent);
@@ -997,7 +997,7 @@ layer.add_food.prototype.render_loaded = function(parent) {
 };
 layer.add_food.prototype.render_foods = function(parent) {
   var container = $.createElement('div');
-  this.food_container = container;
+  this.contents = container;
   for (var i = 0; this.data.food[i]; ++i) {
     this.render_food(container, this.data.food[i]);
   }
@@ -1028,14 +1028,6 @@ layer.add_food.prototype.render_food = function(parent, food) {
   }).innerHTML(food.points);
   container.appendChild(table);
   parent.appendChild(container);
-};
-layer.add_food.prototype.render_complete = function() {
-  if (this.data) {
-    var header = this.header_container.getBoundingClientRect();
-    this.food_container.style({
-      'margin-top': header.height
-    });
-  }
 };
 
 
