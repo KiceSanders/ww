@@ -224,10 +224,11 @@ class user extends api {
       $row = $result->fetch_assoc();
       return array(
         'user' => $row,
+        'unit' => api('unit', 'select_id', array()),
         'food' => api('food', 'select_id', array()),
         'track' => api('track', 'select_id', array()),
         'ingredient' => api('track', 'select_id', array()),
-        'weight' => api('track', 'select_id', array(
+        'weight' => api('weight', 'select_id', array(
           'user_id' => $row['user_id'],
         )),
       );
