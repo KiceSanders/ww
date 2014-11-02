@@ -238,6 +238,19 @@ class user extends api {
       return null;
     }
   }
+  public function set_weight($arguments) {
+    $weight_id = api('weight', 'insert', $arguments);
+    $query = '
+      update 
+        user 
+      set 
+        weight = ' . floatval($arguments['weight']) . ' 
+      where 
+        user_id = ' . intval($arguments['user_id']) . '
+    ';
+    $this->mysqli->query($query);
+    return $weight_id;
+  }
 }
 
 class crud extends api {
