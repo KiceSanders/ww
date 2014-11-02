@@ -226,7 +226,9 @@ class user extends api {
         'user' => $row,
         'unit' => api('unit', 'select_id', array()),
         'food' => api('food', 'select_id', array()),
-        'track' => api('track', 'select_id', array()),
+        'track' => api('track', 'select_id', array(
+          'user_id' => $row['user_id'],
+        )),
         'ingredient' => api('track', 'select_id', array()),
         'weight' => api('weight', 'select_id', array(
           'user_id' => $row['user_id'],
@@ -276,6 +278,14 @@ class crud extends api {
       $arguments['' . $this->class . '_id'],
       $arguments['attributes']
     );
+  }
+  public function delete($id) {
+    $this->update(array(
+      $this->class . '_id' => $id,
+      'attributes' => array(
+        'deleted' => 1,
+      ),
+    ));
   }
 }
 
