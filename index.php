@@ -163,44 +163,6 @@ class my_mysqli extends mysqli{
   }
 }
 
-function user_points($gender, $height, $weight, $date_of_birth) {
-
-  $age = (new DateTime())->diff(new DateTime($date_of_birth))->y;
-
-  if ($gender === 'male') {
-    $total_energy_expenditure_kcal =
-      864 - 9.72 * $age + 1.12 * (14.2 * $weight / 2.2 + 503.0 * $height / 39.3701);
-  } else {
-    $total_energy_expenditure_kcal =
-      387 - 7.31 * $age + 1.14 * (10.9 * $weight / 2.2 + 660.7 * $height / 39.3701);
-  }
-
-  $adjusted_tee = 0.9 * $total_energy_expenditure_kcal + 200;
-
-  $target = round(min(max($adjusted_tee - 1000, 1000), 2500) / 35, DECIMALS);
-
-  $target_mod = min(max($target - 7 - 4, 26), 71);
-
-  return $target_mod;
-
-}
-
-function points($type, $fat, $carbohydrates, $fiber, $protein, $decimals = null) {
-
-  $points =
-    round(
-      (16  * $protein + 19 * $carbohydrates + 45 * $fat - 14 * $fiber) / 175,
-      (($decimals === null) ? DECIMALS : $decimals)
-    );
-
-  if ($type !== 'activity') {
-    $points = max($points, 0);
-  }
-
-  return $points;
-
-}
-
 function array_pluck($key, $rows) {
   $values = array();
   foreach ($rows as $row) {
@@ -231,94 +193,93 @@ class api {
 
 }
 
+class user extends api {
+  public function login($arguments) {
+    $query = '
+      select
+        *
+      from
+        user
+      where
+        username = "' . $this->mysqli->real_escape_string($arguments['username']) . '" and
+        password = sha1(concat(uuid, "' . $this->mysqli->real_escape_string($arguments['password']) . '"))';
+    $result = $this->mysqli->query($query);
+    if ($row = $result->fetch_assoc()) {
+      $query = 'insert into session (user_id,`key`) values (' . $row['user_id'] . ', sha1(concat(uuid(), now())))';
+      $result = $this->mysqli->query($query);
+      $query = 'select * from session where session_id = ' . $this->mysqli->insert_id . '';
+      $result = $this->mysqli->query($query);
+      $row = $result->fetch_assoc();
+      return $row['key'];
+    } else {
+      return null;
+    }
+  }
+  public function load($date) {
+    $query = 'select * from session where `key` = "' . $this->mysqli->real_escape_string($_REQUEST['key']) . '"';
+    $result = $this->mysqli->query($query);
+    if ($row = $result->fetch_assoc()) {
+      $query = 'select * from user where user_id = ' . $row['user_id'] . '';
+      $result = $this->mysqli->query($query);
+      $row = $result->fetch_assoc();
+      return array(
+        'user' => $row,
+        'unit' => api('unit', 'select_id', array()),
+        'food' => api('food', 'select_id', array()),
+        'track' => api('track', 'select_id', array(
+          'user_id' => $row['user_id'],
+        )),
+        'ingredient' => api('track', 'select_id', array()),
+        'weight' => api('weight', 'select_id', array(
+          'user_id' => $row['user_id'],
+        )),
+      );
+    } else {
+      return null;
+    }
+  }
+  public function set_weight($arguments) {
+    $weight_id = api('weight', 'insert', $arguments);
+    $query = '
+      update 
+        user 
+      set 
+        weight = ' . floatval($arguments['weight']) . ' 
+      where 
+        user_id = ' . intval($arguments['user_id']) . '
+    ';
+    $this->mysqli->query($query);
+    return $weight_id;
+  }
+}
+
 class crud extends api {
-  private function result($result) {
-    if ($result) {
-      foreach ($result as $key => $value) {
-        if (in_array($key, array(
-          'quantity',
-          'fat',
-          'carbohydrates',
-          'fiber',
-          'protein',
-          'height',
-          'weight',
-          'multiplier',
-        ))) {
-          $result[$key] = round(floatval($value), 4);
-        }
-      }
-      if (
-        isset($result['type']) and
-        isset($result['fat']) and
-        isset($result['carbohydrates']) and
-        isset($result['fiber']) and
-        isset($result['protein'])
-      ) {
-        $result['points'] = round(points(
-          $result['type'],
-          $result['fat'],
-          $result['carbohydrates'],
-          $result['fiber'],
-          $result['protein']
-        ), 0);
-      }
-      if (
-        isset($result['gender']) and
-        isset($result['height']) and
-        isset($result['weight']) and
-        isset($result['date_of_birth'])
-      ) {
-        $result['points'] = round(user_points(
-          $result['gender'],
-          $result['height'],
-          $result['weight'],
-          $result['date_of_birth']
-         ), 0);
-      }
-    }
-    return $result;
-  }
-  private function results($results) {
-    foreach ($results as $i => $result) {
-      $results[$i] = $this->result($result);
-    }
-    return $results;
-  }
   public function select_id($attributes) {
-    return $this->results($this->mysqli->select_id(
+    return $this->mysqli->select_id(
       $this->class,
       array('deleted' => 0) + $attributes
-    ));
+    );
   }
   public function select($attributes) {
-    return $this->results($this->mysqli->select(
+    return $this->mysqli->select(
       $this->class,
       array('deleted' => 0) + $attributes
-    ));
+    );
   }
   public function get($id_or_attributes) {
     if (is_numeric($id_or_attributes)) {
-      $result = $this->mysqli->get(
+      return $this->mysqli->get(
         $this->class,
         $id_or_attributes
       );
     } else {
-      $result = $this->mysqli->get(
+      return $this->mysqli->get(
         $this->class,
         array('deleted' => 0) + $id_or_attributes
       );
     }
-    return $this->result($result);
   }
   public function insert($attributes) {
-    if ($this->class !== 'user') {
-      if (isset($attributes['username'])) {
-        $user = api('user', 'get', array('username' => $attributes['username']));
-        unset($attributes['username']);
-        $attributes['user_id'] = $user['user_id'];
-      }
-    }
     return $this->mysqli->insert(
       $this->class,
       $attributes
@@ -331,6 +292,14 @@ class crud extends api {
       $arguments['attributes']
     );
   }
+  public function delete($id) {
+    $this->update(array(
+      $this->class . '_id' => $id,
+      'attributes' => array(
+        'deleted' => 1,
+      ),
+    ));
+  }
 }
 
 class food extends crud {}
@@ -338,174 +307,4 @@ class ingredient extends crud {}
 class track extends crud {}
 class unit extends crud {}
 class weight extends crud {}
-class user extends crud {
-  public function points($arguments) {
-    $dates = array();
-    $date = $arguments['date'];
-    do {
-      $dates[] = $date;
-      $date = date('Y-m-d', strtotime($date) - 86400);
-    } while (date('w', strtotime($date)) !=  6);
-    $date = $arguments['date'];
-    do {
-      $dates[] = $date;
-      $date = date('Y-m-d', strtotime($date) + 86400);
-    } while (date('w', strtotime($date)) != 0);
-    $dates = array_values(array_unique($dates));
-    $results = api('multiple', 'curry', array(
-      array(
-        'class' => 'user',
-        'function' => 'get',
-        'arguments' => array(
-          'username' => $arguments['username'],
-        ),
-      ),
-      array(
-        'class' => 'track',
-        'function' => 'select_id',
-        'arguments' => array(
-          'date' => $dates,
-          'user_id' => '=user.user_id',
-        ),
-      ),
-      array(
-        'class' => 'food',
-        'function' => 'select_id',
-        'arguments' => array(
-          'food_id' => '=track[].food_id',
-        ),
-      ),
-    ));
-    sort($dates);
-    $weekly_points = 49;
-    $activity_points = 0;
-    $activity_points_remaining = 0;
-    foreach ($dates as $date) {
-      $results['points'][$date] = 0;
-      foreach ($results['track'] as $track_id => $track) {
-        if ($track['date'] === $date) {
-          if ($track['points'] < 0) {
-            $activity_points += -1 * $track['points'];
-            $activity_points_remaining += -1 * $track['points'];
-          } else {
-            $results['points'][$date] += $track['points'];
-          }
-        }
-      }
-      $results['activity_points'][$date] = $activity_points;
-      $over = $results['points'][$date] - $results['user']['points'];
-      if ($over > 0) {
-        if ($activity_points_remaining > 0) {
-          if ($over < $activity_points_remaining) {
-            $activity_points_remaining -= $over;
-            $over = 0;
-          } else {
-            $over -= $activity_points_remaining;
-            $activity_points_remaining = 0;
-          }
-        }
-        $weekly_points -= $over;
-      }
-      $results['activity_points_remaining'][$date] = $activity_points_remaining;
-      $results['weekly_points'][$date] = $weekly_points;
-    }
-    return $results;
-  }
-}
-
-class multiple {
-  public function synchronous($calls) {
-    $results = array();
-    foreach ($calls as $call) {
-      $results[] = api(
-        $call['class'],
-        $call['function'],
-        $call['arguments']
-      );
-    }
-    return $results;
-  }
-  private function curry_replace($results, $argument) {
-    if ($argument) {
-      $key = array_shift($argument);
-      if ($key) {
-        return $this->curry_replace($results[$key], $argument);
-      } else {
-        return $this->curry_replace(
-          array_pluck(array_shift($argument), $results),
-          $argument
-        );
-      }
-    } else {
-      return $results;
-    }
-  }
-  private function curry_find($results, $arguments) {
-    if (is_array($arguments)) {
-     foreach ($arguments as $key => $value) {
-       if (
-         is_string($value) and
-         (substr($value, 0, 1) === '=')
-       ) {
-         $arguments[$key] = $this->curry_replace(
-           $results,
-           explode('.', str_replace(
-             array('[',']','"','\''),
-             array('.','','',''),
-             substr($value, 1)
-           ))
-         );
-       }
-     }
-    }
-    return $arguments;
-  }
-  private function results($results) {
-    if (
-      isset($results['food']) and
-      !isset($results['food']['food_id']) and
-      isset($results['track'])
-    ) {
-      $units = array();
-      foreach (api('unit', 'select', array()) as $unit) {
-        $units[$unit['unit']] = floatval($unit['multiplier']);
-      }
-      foreach ($results['track'] as $track_id => $track) {
-        $food = $results['food'][$track['food_id']];
-        $results['track'][$track_id]['points'] = round(
-          $track['quantity'] / $food['quantity'] *
-          $units[$track['units']] / $units[$food['units']] *
-          points(
-            $food['type'],
-            $food['fat'],
-            $food['carbohydrates'],
-            $food['fiber'],
-            $food['protein'],
-            4
-          ),
-          0
-        );
-      }
-    }
-    return $results;
-  }
-  public function curry($calls) {
-    $results = array();
-    foreach ($calls as $call) {
-      $results[
-        isset($calls['name']) ? $calls['name'] : $call['class']
-      ] = api(
-        $call['class'],
-        $call['function'],
-        $this->curry_find($results, $call['arguments'])
-      );
-    }
-    return $this->results($results);
-  }
-}
-
-
-
-
-
 

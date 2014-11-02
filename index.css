@@ -5,8 +5,10 @@ html, body {
 }
 body, tbody, input, button, select {
   font-family: arial;
-  font-size: 12px;
+  font-size: 14px;
 }
 input, select {
   border: 1px solid #cccccc;
+  line-height: 28px;
+  box-sizing: border-box;
 }
