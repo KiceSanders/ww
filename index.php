@@ -307,4 +307,13 @@ class ingredient extends crud {}
 class track extends crud {}
 class unit extends crud {}
 class weight extends crud {}
-
+class img {
+  public function upload($data) {
+    if (strlen($data) > (100 * 1000)) {
+      throw new Exception('filesize exceded');
+    }
+    $file_name = md5(mt_rand() . time()) . '.jpg';
+    file_put_contents('img/' . $file_name, base64_decode($data));
+    return $file_name;
+  }
+}

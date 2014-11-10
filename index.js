@@ -211,7 +211,7 @@ layer.home = function() {
 };
 rocket.inherits(layer.home, layer);
 layer.home.prototype.render_contents = function(parent) {
-  if (this.data) {
+  if (this.data && !$.isEmpty(this.data)) {
     this.render_loaded(parent);
   } else {
     this.render_loading(parent);
@@ -564,42 +564,52 @@ layer.home.prototype.render_track = function(parent, track) {
     track.quantity,
     track.units,
     track.points,
-    time
+    time,
+    food.img,
+    food.img_rotation
   );
   parent.appendChild(container);
 };
 layer.home.prototype.render_track_food =
-    function(parent, name, quantity, units, points, time) {
-
+    function(parent, name, quantity, units, points, time, img, img_rotation) {
   var container = $.createElement('div').style({
     'border-bottom': '1px solid #eeeeee'
   });
-  var table = $.table(2).style({
+  var table = $.table(img ? 3 : 2).style({
     'height': 40
   });
+  if (img) {
+    table.tds[0].setAttribute({
+      'width': 45
+    }).appendChild($.createElement('img').style({
+      'width': 40
+    }).setAttribute({
+      'src': 'img/' + img
+    }));
+  }
   table.tds[0].style({
     'padding-left': 5
   });
-  table.tds[0].appendChild($.createElement('div').innerHTML(
+  table.tds[img ? 1 : 0].appendChild($.createElement('div').innerHTML(
     name
   ));
-  table.tds[0].appendChild($.createElement('div').style({
+  table.tds[img ? 1 : 0].appendChild($.createElement('div').style({
     'color': 'gray',
     'font-size': 10
   }).innerHTML(
     (time ? (time + ' - ') : '') +
     decimal_to_fraction(quantity) + ' ' + units
   ));
-  table.tds[1].style({
+  table.tds[img ? 2 : 1].style({
     'width': 60,
     'text-align': 'center'
   });
-  table.tds[1].innerHTML(+points);
+  table.tds[img ? 2 : 1].innerHTML(+points);
   container.appendChild(table);
   parent.appendChild(container);
 };
 layer.home.prototype.render_complete = function() {
-  if (this.data) {
+  if (this.contents_container) {
     this.contents_container.style({
       'margin-top': this.header_container.getBoundingClientRect().height
     });
@@ -682,6 +692,10 @@ layer.menu.prototype.render_items = function(parent) {
     {
       'name': 'Update Weight',
       'go': 'update_weight'
+    },
+    {
+      'name': 'Logout',
+      'go': 'logout'
     }
   ];
   for (var i = 0; items[i]; ++i) {
@@ -824,6 +838,7 @@ layer.food.prototype.render_food_fields = function(parent) {
   this.render_name(container);
   this.render_quantity_units(container);
   this.render_save_buttons(container);
+  this.render_image(container);
   parent.appendChild(container);
 };
 layer.food.prototype.render_fat_carbohydrates_fiber_protein = function(parent) {
@@ -847,9 +862,10 @@ layer.food.prototype.render_food_parameter = function(parent, item) {
   var input = $.createElement('input').style({
     'width': 80
   }).setAttribute({
-    'type': 'number',
+    'type': 'tel',
     'placeholder': 'grams'
   }).addEventListener('afterkeydown,blur', function() {
+    this.value = this.value.replace(/[^\d\.]+/g, '.');
     self.points.innerHTML(points(
       self.fat.value() || 0,
       self.carbohydrates.value() || 0,
@@ -873,7 +889,9 @@ layer.food.prototype.get_args = function() {
     'protein': this.protein.value(),
     'quantity': this.quantity.value(),
     'units': this.units.value(),
-    'user_id': this.data.user.user_id
+    'user_id': this.data.user.user_id,
+    'img': this.img || null,
+    'img_rotation': this.img_rotation || null
   };
 };
 layer.food.prototype.render_save_buttons = function(parent) {
@@ -900,6 +918,7 @@ layer.food.prototype.render_save_buttons = function(parent) {
     'CREATE'
   ).addEventListener('click', function() {
     create(function() {
+      delete self.img;
       self.render();
     });
   });
@@ -929,6 +948,74 @@ layer.food.prototype.render_complete = function() {
     this.fat.focus();
   }
 };
+layer.food.prototype.render_image  = function(parent, opt_view_only) {
+  var container = $.createElement('div').style({
+    'text-align': 'center',
+    'margin-top': 5
+  });
+  var self = this;
+  if (this.img) {
+    var image = $.createElement('img');
+    var rotate = function(degrees) {
+      image.style({
+        'transform': 'rotate(' + degrees + 'deg)'
+      });
+    };
+    container.appendChild(image).setAttribute({
+      'src': 'img/' + this.img
+    }).addEventListener('click', function() {
+      self.img_rotation = (self.img_rotation + 90) % 360;
+      rotate(self.img_rotation);
+    });
+    rotate(this.img_rotation);
+  } else if (!opt_view_only) {
+    var file = $.createElement('input').style({
+      'width': '100%'
+    }).setAttribute({
+      'type': 'file',
+      'aceept': 'image/*',
+      'capture': 'camera'
+    }).addEventListener('change', function() {
+      var reader = new FileReader();
+      if (file[0].files[0]) {
+        reader.readAsDataURL(file[0].files[0]);
+        reader.addEventListener('load', function(e) {
+          var image = $.createElement('img').setAttribute({
+            'src': reader.result
+          }).addEventListener('load', function() {
+            var multiplier =
+              image.getAttribute('width') /
+              image.getAttribute('height');
+            var width = 300;
+            var height = 300;
+            if (multiplier < 1) {
+              width *= multiplier;
+            } else {
+              height /= multiplier;
+            }
+            var canvas = $.createElement('canvas').setAttribute({
+              'width': width,
+              'height': height
+            });
+            var context = canvas[0].getContext('2d');
+            context.drawImage(image[0], 0, 0, width, height);
+            var shrinked = canvas[0].toDataURL('image/jpeg');
+            container.appendChild($.createElement('img').setAttribute({
+              'src': shrinked
+            }));
+            api('img', 'upload', shrinked.substr(23), function(filename) {
+              self.img = filename;
+              self.img_rotation = 0;
+            });
+          });
+        });
+      }
+    });
+    container.appendChild(file);
+  }
+  parent.appendChild(container);
+};
+
 
 
 
@@ -1090,7 +1177,10 @@ layer.food_search.prototype.render_food = function(parent, food) {
         food.fiber,
         food.protein
       ) :
-      food.points
+      food.points,
+    null,
+    food.img,
+    food.img_rotation
   );
   parent.appendChild(container);
 };
@@ -1101,6 +1191,20 @@ layer.food_search.prototype.render_complete = function() {
   }
 };
 
+
+
+
+
+layer.logout = function() {};
+rocket.inherits(layer.logout, layer);
+layer.logout.prototype.render_contents = function() {};
+layer.logout.prototype.render_complete = function() {
+  $.cookie('key', '');
+  for (var i in this.data) {
+    delete this.data[i];
+  }
+  go('login');
+};
 
 
 
@@ -1136,6 +1240,10 @@ layer.track_food.prototype.render_track = function(parent) {
   this.render_time(table.tds[1]);
   container.appendChild(table);
   this.render_track_button(container);
+  var food = this.data.food[this.food_id];
+  this.img = food.img;
+  this.img_rotation = food.img_rotation;
+  this.render_image(container, true);
   parent.appendChild(container);
 };
 layer.track_food.prototype.render_name_serving = function(parent) {
@@ -1477,6 +1585,7 @@ layer.update_weight.prototype.render_update_weight = function(parent) {
           'weight': weight,
           'timestamp': $.dateISOString()
         };
+        self.data.user.weight = weight;
         self.update_data();
         go('home');
       });
@@ -1507,8 +1616,10 @@ layer.edit_food.prototype.render_loaded = function(parent) {
 };
 layer.edit_food.prototype.render_edit = function(parent) {
   var container = $.createElement('div');
-  this.render_food_fields(container);
   var food = this.data.food[this.food_id];
+  this.img = food.img;
+  this.img_rotation = food.img_rotation;
+  this.render_food_fields(container);
   this.fat.value(+food.fat);
   this.carbohydrates.value(+food.carbohydrates);
   this.fiber.value(+food.fiber);
@@ -1556,16 +1667,7 @@ layer.edit_food.prototype.render_save_buttons = function(parent) {
   ).addEventListener('click', function(food_id) {
     if (!loading) {
       loading = true;
-      var args = {
-        'fat': self.fat.value(),
-        'carbohydrates': self.carbohydrates.value(),
-        'fiber': self.fiber.value(),
-        'protein': self.protein.value(),
-        'name': self.name.value(),
-        'quantity': self.quantity.value(),
-        'units': self.units.value(),
-        'points': null
-      };
+      var args = self.get_args();
       api('food', 'update', {'food_id': self.food_id, 'attributes': args}, function() {
         $.extend(self.data.food[self.food_id], args);
         go('edit_food');
@@ -1579,6 +1681,7 @@ layer.edit_food.prototype.render_save_buttons = function(parent) {
 layer.edit_food.prototype.render_complete = function() {
   layer.edit_food.prototype.superClass_.render_complete.apply(this, arguments);
   if (
+    (this.data) &&
     (this.food_id) &&
     (this.data.food[this.food_id].user_id != this.data.user.user_id) &&
     (this.data.user.user_id != 1)
