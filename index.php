@@ -229,7 +229,7 @@ class user extends api {
         'track' => api('track', 'select_id', array(
           'user_id' => $row['user_id'],
         )),
-        'ingredient' => api('track', 'select_id', array()),
+        'ingredient' => api('ingredient', 'select_id', array()),
         'weight' => api('weight', 'select_id', array(
           'user_id' => $row['user_id'],
         )),

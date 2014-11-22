@@ -1003,10 +1003,13 @@ layer.food.prototype.render_image  = function(parent, opt_view_only) {
     };
     container.appendChild(image).setAttribute({
       'src': 'img/' + this.img
-    }).addEventListener('click', function() {
-      self.img_rotation = (self.img_rotation + 90) % 360;
-      rotate(self.img_rotation);
     });
+    if (this.this_class_name !== 'track_food') {
+      image.addEventListener('click', function() {
+        self.img_rotation = (self.img_rotation + 90) % 360;
+        rotate(self.img_rotation);
+      });
+    }
     rotate(this.img_rotation);
   } else if (!opt_view_only) {
     var file = $.createElement('input').style({
