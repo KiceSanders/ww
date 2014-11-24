@@ -118,7 +118,7 @@ var orange = '#ef6103';
 
 var layer = function() {};
 layer.prototype.render = function() {
-  $('body').style({ 
+  $('body').style({
     'background-color': white
   });
   var container = $.createElement('div');
@@ -134,7 +134,7 @@ layer.prototype.render_page = function(parent) {
     (this.data && !$.isEmpty(this.data)) ||
     (this.constructor === layer.login)
   ) {
-  
+
     var container = $.createElement('div').style({
       'position': 'fixed',
       'top': 0
@@ -142,7 +142,7 @@ layer.prototype.render_page = function(parent) {
     this.header_container = container;
     this.render_header(container);
     parent.appendChild(container);
-    
+
     var container = $.createElement('div');
     var spacer = $.createElement('div').style({
       'height': 1
@@ -151,7 +151,7 @@ layer.prototype.render_page = function(parent) {
     this.contents_container = container;
     this.render_contents(container);
     parent.appendChild(container);
-    
+
   } else {
     this.render_loading(parent);
   }
@@ -200,9 +200,9 @@ layer.prototype.update_data = function() {
   }
   this.data.track_date = track_date;
 };
-layer.prototype.render_food = 
+layer.prototype.render_food =
   function(parent, food_id, opt_quantity, opt_units, opt_time, opt_points) {
-  
+
   var food = this.data.food[food_id];
   var container = $.createElement('div').style({
     'background-color': white,
@@ -234,7 +234,7 @@ layer.prototype.render_food =
     'font-size': 10
   }).innerHTML(
     (opt_time ? (opt_time + ' - ') : '') +
-    decimal_to_fraction(opt_quantity || food.quantity) + ' ' + 
+    decimal_to_fraction(opt_quantity || food.quantity) + ' ' +
     (opt_units || food.units)
   ));
   table.tds[2].style({
@@ -257,7 +257,7 @@ layer.prototype.render_food =
   table.tds[2].innerHTML(+pts);
   container.appendChild(table);
   parent.appendChild(container);
-  
+
 };
 layer.prototype.render_header = function(parent) {
   var container = $.createElement('div');
@@ -338,7 +338,7 @@ layer.prototype.render_foods_list = function(parent) {
     var food_name_lowercase = food.name.toLowerCase();
     if (
       !search_string ||
-      search_string.map(function(str) { 
+      search_string.map(function(str) {
         return food_name_lowercase.indexOf(str);
       }).filter(function(pos) {
         return (pos === -1);
@@ -730,7 +730,7 @@ layer.prototype.render_image = function(parent, opt_view_only) {
     });
     container.appendChild(file);
   }
-  
+
   parent.appendChild(container);
 };
 layer.prototype.render_fat_carbohydrates_fiber_protein = function(parent) {
@@ -835,7 +835,7 @@ layer.login.prototype.render_header = function(parent) {
   parent.appendChild(container);
 };
 layer.login.prototype.render_contents = function(parent) {
-  $('body').style({ 
+  $('body').style({
     'background-color': light_gray
   });
   var container = $.createElement('div');
@@ -1435,6 +1435,7 @@ layer.edit_track.prototype.render_contents = function(parent) {
   this.quantity.value(this.data.track[this.track_id].quantity);
   this.units.value(this.data.track[this.track_id].units);
   this.date.value(this.data.track[this.track_id].date);
+  this.quantity_units_handler();
   this.time.value(this.data.track[this.track_id].time.substr(0, 5));
 };
 layer.edit_track.prototype.render_track_button = function(parent) {
@@ -1576,7 +1577,7 @@ layer.edit_food.prototype.render_edit = function(parent) {
   this.render_delete_update(container);
   this.render_image(container);
   parent.appendChild(container);
-  
+
   var food = this.data.food[this.food_id];
   this.fat.value(+food.fat);
   this.carbohydrates.value(+food.carbohydrates);
@@ -1585,7 +1586,7 @@ layer.edit_food.prototype.render_edit = function(parent) {
   this.name.value(food.name);
   this.quantity.value(+food.quantity);
   this.units.value(food.units);
-  
+
   this.fat.dispatchEvent('blur');
 };
 layer.edit_food.prototype.render_complete = function() {
@@ -1663,7 +1664,7 @@ layer.edit_food.prototype.render_delete_update = function(parent) {
 layer.update_weight = function() {};
 rocket.inherits(layer.update_weight, layer);
 layer.update_weight.prototype.render_contents = function(parent) {
-  $('body').style({ 
+  $('body').style({
     'background-color': light_gray
   });
   var container = $.createElement('div');
@@ -1759,7 +1760,8 @@ layer.quick_create.prototype.render_points = function(parent) {
   });
   var table = $.table(2).style({
     'border-top': '1px solid ' + gray,
-    'border-bottom': '1px solid ' + gray
+    'border-bottom': '1px solid ' + gray,
+    'background-color': 'white'
   });
   table.tds[0].style({
     'padding-left': 10
@@ -1796,7 +1798,7 @@ layer.quick_create.prototype.get_food_arguments = function() {
 
 
 layer.create_activity = function() {};
-rocket.inherits(layer.create_activity, layer.create_food);
+rocket.inherits(layer.create_activity, layer.quick_create);
 layer.create_activity.prototype.render_contents = function(parent) {
   var container = $.createElement('div');
   this.render_points(container);
@@ -1804,28 +1806,6 @@ layer.create_activity.prototype.render_contents = function(parent) {
   this.render_quantity_units(container);
   this.units.value('hour');
   this.render_create_create_track(container);
-  parent.appendChild(container);
-};
-layer.create_activity.prototype.render_points = function(parent) {
-  var container = $.createElement('div').style({
-    'padding-top': 10
-  });
-  var table = $.table(2).style({
-    'border-top': '1px solid ' + gray,
-    'border-bottom': '1px solid ' + gray
-  });
-  table.tds[0].style({
-    'padding-left': 10
-  }).setAttribute({
-    'width': 50
-  }).innerHTML('Points');
-  var select = $.createElement('select');
-  this.points = select;
-  for (var i = 0; i < 100; ++i) {
-    select.appendChild($.createElement('option').innerHTML(i));
-  }
-  table.tds[1].appendChild(select);
-  container.appendChild(table);
   parent.appendChild(container);
 };
 layer.create_activity.prototype.get_food_arguments = function() {

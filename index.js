@@ -258,6 +258,7 @@ layer.home.prototype.update_data = function() {
     }
     track_date[track.date].push(track);
     var food = this.data.food[track.food_id];
+    console.log(track);
     var multiplier =
       (track.quantity * units[track.units]) /
       (food.quantity * units[food.units]);
