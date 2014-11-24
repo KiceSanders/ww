@@ -105,133 +105,58 @@ var user_points = function(gender, height, weight, date_of_birth, date) {
   return target_mod;
 
 }
+var white = '#f7f7f7';
+var dark_gray = '#a7a7aa';
+var gray = '#c8c7cc';
+var light_gray = '#efeff4';
+var blue = '#007aff';
+var orange = '#ef6103';
+
 
 
 
 
 var layer = function() {};
 layer.prototype.render = function() {
+  $('body').style({
+    'background-color': white
+  });
   var container = $.createElement('div');
   $.EventTarget.removeAllEventListeners();
-  this.render_contents(container);
+  this.render_page(container);
   if (container.innerHTML().length) {
     $('body').innerHTML('').appendChild(container);
   }
   this.render_complete();
 };
-layer.prototype.render_complete = function() {};
+layer.prototype.render_page = function(parent) {
+  if (
+    (this.data && !$.isEmpty(this.data)) ||
+    (this.constructor === layer.login)
+  ) {
 
+    var container = $.createElement('div').style({
+      'position': 'fixed',
+      'top': 0
+    });
+    this.header_container = container;
+    this.render_header(container);
+    parent.appendChild(container);
 
+    var container = $.createElement('div');
+    var spacer = $.createElement('div').style({
+      'height': 1
+    });
+    container.appendChild(spacer);
+    this.contents_container = container;
+    this.render_contents(container);
+    parent.appendChild(container);
 
-layer.login = function(opt_username) {
-  this.opt_username = opt_username;
-};
-rocket.inherits(layer.login, layer);
-layer.login.prototype.render_contents = function(parent) {
-  var container = $.createElement('div').style({
-    'margin': 10
-  });
-  var table = $.table(1, 3);
-  table.tbody.style({
-    'text-align': 'center'
-  });
-  this.render_username(table.trs[0].tds[0]);
-  this.render_password(table.trs[1].tds[0]);
-  this.render_login_button(table.trs[2].tds[0]);
-  container.appendChild(table);
-  parent.appendChild(container);
-};
-layer.login.prototype.input_style = {
-  'margin-top': 5,
-  'width': '95%',
-  'font-size': 18
-};
-layer.login.prototype.render_username = function(parent) {
-  var container = $.createElement('div');
-  var input = $.createElement('input').style(this.input_style).setAttribute({
-    'placeholder': 'username'
-  });
-  var self = this;
-  input.addEventListener('keydown', function(e) {
-    if (e.which === $.KEY.enter) {
-      self.login.dispatchEvent('click');
-    }
-  });
-  input.value(this.opt_username || '');
-  this.username = input;
-  container.appendChild(input);
-  parent.appendChild(container);
-};
-layer.login.prototype.render_password = function(parent) {
-  var container = $.createElement('div');
-  var input = $.createElement('input').style(this.input_style).setAttribute({
-    'placeholder': 'password',
-    'type': 'password'
-  });
-  var self = this;
-  input.addEventListener('keydown', function(e) {
-    if (e.which === $.KEY.enter) {
-      self.login.dispatchEvent('click');
-    }
-  });
-  this.password = input;
-  container.appendChild(input);
-  parent.appendChild(container);
-};
-layer.login.prototype.render_login_button = function(parent) {
-  var container = $.createElement('div');
-  var button = $.createElement('button').style(this.input_style).innerHTML('login');
-  this.login = button;
-  var loading = false;
-  var self = this;
-  button.addEventListener('click', function() {
-    if (!loading) {
-      loading = true;
-      api('user', 'login', {
-        'username': self.username.value(),
-        'password': self.password.value()
-      }, function(key) {
-        if (key) {
-          $.cookie('key', key, 90);
-          go('home');
-        } else {
-          go('login', self.username.value());
-        }
-      });
-    }
-  });
-  container.appendChild(button);
-  parent.appendChild(container);
-};
-layer.login.prototype.render_complete = function() {
-  this.login.style({
-    'width': this.username.getBoundingClientRect().width
-  });
-  if (this.opt_username) {
-    this.password.focus();
-  } else {
-    this.username.focus();
-  }
-};
-
-
-
-layer.home = function() {
-  var today = new Date();
-  this.date =
-    today.getFullYear() + '-' +
-    $.padLeft(today.getMonth() + 1, 2, '0') + '-' +
-    $.padLeft(today.getDate(), 2, '0');
-};
-rocket.inherits(layer.home, layer);
-layer.home.prototype.render_contents = function(parent) {
-  if (this.data && !$.isEmpty(this.data)) {
-    this.render_loaded(parent);
   } else {
     this.render_loading(parent);
   }
 };
-layer.home.prototype.render_loading = function() {
+layer.prototype.render_loading = function() {
   var self = this;
   api('user', 'load', this.date, function(data) {
     layer.prototype.data = self.data = data;
@@ -239,13 +164,7 @@ layer.home.prototype.render_loading = function() {
     self.render();
   });
 };
-layer.home.prototype.render_loaded = function(parent) {
-  var container = $.createElement('div');
-  this.render_header(container);
-  this.render_tracks(container);
-  parent.appendChild(container);
-};
-layer.home.prototype.update_data = function() {
+layer.prototype.update_data = function() {
   var units = {};
   for (var i in this.data.unit) {
     units[this.data.unit[i].unit] = this.data.unit[i].multiplier;
@@ -258,7 +177,6 @@ layer.home.prototype.update_data = function() {
     }
     track_date[track.date].push(track);
     var food = this.data.food[track.food_id];
-    console.log(track);
     var multiplier =
       (track.quantity * units[track.units]) /
       (food.quantity * units[food.units]);
@@ -282,470 +200,447 @@ layer.home.prototype.update_data = function() {
   }
   this.data.track_date = track_date;
 };
+layer.prototype.render_food =
+  function(parent, food_id, opt_quantity, opt_units, opt_time, opt_points) {
 
-layer.home.prototype.render_header = function(parent) {
+  var food = this.data.food[food_id];
   var container = $.createElement('div').style({
-    'position': 'fixed',
-    'top': 0
+    'background-color': white,
+    'border-bottom': '1px solid ' + light_gray
   });
-  this.header_container = container;
-  this.render_header_top(container);
-  this.render_header_bottom(container);
-  parent.appendChild(container);
-};
-layer.home.prototype.render_header_top = function(parent) {
-  var container = $.createElement('div');
-  var table = $.table(5);
-  table.tbody.style({
-    'text-align': 'center',
-    'font-size': 32,
-    'background-color': '#005589',
-    'color': 'white',
-    'line-height': 60
-  });
-  table.tds[0].setAttribute({'width': '20%'});
-  table.tds[1].setAttribute({'width': '20%'});
-  table.tds[3].setAttribute({'width': '20%'});
-  table.tds[4].setAttribute({'width': '20%'});
-  this.render_header_yesterday_tomorrow(table.tds[0], -1);
-  this.render_header_menu(table.tds[1]);
-  this.render_header_label(table.tds[2]);
-  this.render_header_track(table.tds[3]);
-  this.render_header_yesterday_tomorrow(table.tds[4], 1);
-  container.appendChild(table);
-  parent.appendChild(container);
-};
-layer.home.prototype.render_header_yesterday_tomorrow = function(parent, offset) {
-  var container = $.createElement('div');
-  container.innerHTML((offset < 0) ? '<' : '>');
-  var self = this;
-  container.addEventListener('click', function() {
-    var date = $.strToDate(self.date);
-    date = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate() + offset
-    );
-    self.date =
-      date.getFullYear() + '-' +
-      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
-      $.padLeft(date.getDate(), 2, '0');
-    self.render();
-  });
-  parent.appendChild(container);
-};
-layer.home.prototype.render_header_menu = function(parent) {
-  var container = $.createElement('div');
-  container.innerHTML('&#x2261;');
-  container.addEventListener('click', function() {
-    go('menu');
-  });
-  parent.appendChild(container);
-};
-layer.home.prototype.render_header_label = function(parent) {
-  var container = $.createElement('div').style({
-    'font-size': 14,
-    'line-height': 16
-  });
-  container.addEventListener('click', function() {
-    (new layer.home()).render();
-  });
-  container.appendChild($.createElement('div').innerHTML(
-    this.data.user.username
-  ));
-  container.appendChild($.createElement('div').innerHTML(
-    ('' + $.strToDate(this.date)).substr(0, 3)
-  ));
-  container.appendChild($.createElement('div').innerHTML(
-    this.date.split('-')[1] + '/' +
-    this.date.split('-')[2]
-  ));
-  parent.appendChild(container);
-};
-layer.home.prototype.render_header_track = function(parent) {
-  var container = $.createElement('div');
-  container.innerHTML('+');
-  container.addEventListener('click', function() {
-    go('track_food');
-  });
-  parent.appendChild(container);
-};
-layer.home.prototype.render_header_bottom = function(parent) {
-  var container = $.createElement('div').style({
-    'border-bottom': '1px solid gray',
-    'background-color': 'white',
-    'opacity': 0.9
-  });
-  var table = $.table(5).style({
-    'height': 60
-  });
-  table.tbody.style({
-    'text-align': 'center'
-  });
-  this.render_points_remaining(table.tds[0]);
-  this.render_points_used(table.tds[1]);
-  this.render_points_daily(table.tds[2]);
-  this.render_points_weekly(table.tds[3]);
-  this.render_points_activity(table.tds[4]);
-  container.appendChild(table);
-  parent.appendChild(container);
-};
-layer.home.prototype.points_label = {
-  'color': 'gray',
-  'font-size': 8
-};
-layer.home.prototype.points_value = {
-  'color': '#ef6103',
-  'font-size': 28
-};
-layer.home.prototype.right_border = {
-  'border-right': '1px dotted gray'
-};
-layer.home.prototype.get_daily_points = function(date) {
-  var weight = 0;
-  for (var i in this.data.weight) {
-    if (this.data.weight[i].timestamp.substr(0, 10) <= date) {
-      weight = this.data.weight[i].weight;
-    }
-  }
-  return user_points(
-    this.data.user.gender,
-    this.data.user.height,
-    weight,
-    this.data.user.date_of_birth,
-    date
-  );
-};
-layer.home.prototype.render_points_daily = function(parent) {
-  var container = $.createElement('div').style(this.right_border);
-  container.appendChild($.createElement('div').style(
-    this.points_label
-  ).innerHTML(
-    'Daily<br/>Points'
-  ));
-  container.appendChild($.createElement('div').style(
-    this.points_value
-  ).innerHTML(
-    this.get_daily_points(this.date)
-  ));
-  parent.appendChild(container);
-};
-layer.home.prototype.get_points_used = function(date) {
-  if (this.data.track_date[date]) {
-    return this.data.track_date[date].map(function(row) {
-      return +row.points;
-    }).reduce(function(a, b) {
-      return a + b;
-    });
-  } else {
-    return 0;
-  }
-};
-layer.home.prototype.render_points_used = function(parent) {
-  var container = $.createElement('div').style(this.right_border);
-  container.appendChild($.createElement('div').style(
-    this.points_label
-  ).innerHTML(
-    'Daily<br/>Used'
-  ));
-  container.appendChild($.createElement('div').style(
-    this.points_value
-  ).innerHTML(
-    this.get_points_used(this.date)
-  ));
-  parent.appendChild(container);
-};
-layer.home.prototype.get_points_remaining = function(date) {
-  return this.get_daily_points(date) - this.get_points_used(date);
-};
-layer.home.prototype.render_points_remaining = function(parent) {
-  var container = $.createElement('div').style(this.right_border);
-  container.appendChild($.createElement('div').style(
-    this.points_label
-  ).innerHTML(
-    'Daily<br/>Remaining'
-  ));
-  container.appendChild($.createElement('div').style(
-    this.points_value
-  ).innerHTML(
-    this.get_points_remaining(this.date)
-  ));
-  parent.appendChild(container);
-};
-layer.home.prototype.render_points_weekly = function(parent) {
-  var container = $.createElement('div').style(this.right_border);
-  container.appendChild($.createElement('div').style(
-    this.points_label
-  ).innerHTML(
-    'Weekly<br/>Remaining'
-  ));
-  var date = $.strToDate(this.date);
-  var weekly_points = 49;
-  do {
-    var daily_points_remaining = this.get_points_remaining(
-      date.getFullYear() + '-' +
-      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
-      $.padLeft(date.getDate(), 2, '0')
-    );
-    if (daily_points_remaining < 0) {
-      weekly_points += daily_points_remaining;
-    }
-    date = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
-  } while (('' + date).substr(0, 3) !== 'Sat');
-  container.appendChild($.createElement('div').style(
-    this.points_value
-  ).innerHTML(
-    weekly_points
-  ));
-  parent.appendChild(container);
-};
-layer.home.prototype.render_points_activity = function(parent) {
-  var container = $.createElement('div');
-  container.appendChild($.createElement('div').style(
-    this.points_label
-  ).innerHTML(
-    'Activity<br/>Earned'
-  ));
-  var date = $.strToDate(this.date);
-  var activity_earned = 0;
-  do {
-    var date_string = date.getFullYear() + '-' +
-      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
-      $.padLeft(date.getDate(), 2, '0');
-    if (this.data.track_date[date_string]) {
-      for (var i = 0; this.data.track_date[date_string][i]; ++i) {
-        var track = this.data.track_date[date_string][i];
-        var food = this.data.food[track.food_id];
-        if (food.type === 'activity') {
-          activity_earned += -1 * track.points;
-        }
-      }
-    }
-    date = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
-  } while (('' + date).substr(0, 3) !== 'Sat');
-  container.appendChild($.createElement('div').style(
-    this.points_value
-  ).innerHTML(
-    activity_earned
-  ));
-  parent.appendChild(container);
-};
-layer.home.prototype.render_tracks = function(parent) {
-  var container = $.createElement('div');
-  this.contents_container = container;
-  var tracks = this.data.track_date[this.date] || [];
-  var rendered = {};
-  for (var i = 0; tracks[i]; ++i) {
-    this.render_track_header(container, tracks[i], rendered);
-    this.render_track(container, tracks[i]);
-  }
-  parent.appendChild(container);
-};
-layer.home.prototype.render_track_header = function(parent, track, rendered) {
-  var container = $.createElement('div').style({
-    'background-color': '#eeeeee',
-    'padding': '5px 10px',
-    'color': 'gray',
-    'font-size': 10
-  });
-  var headers = {
-    '11': 'Breakfast',
-    '16': 'Lunch',
-    '22': 'Dinner',
-    '24': 'Dessert'
-  };
-  for (var hour in headers) {
-    if (track.time < hour) {
-      if (!rendered[headers[hour]]) {
-        rendered[headers[hour]] = true;
-        parent.appendChild(container.innerHTML(headers[hour]));
-      }
-      break;
-    }
-  }
-};
-layer.home.prototype.render_track = function(parent, track) {
-  var container = $.createElement('div');
-  container.addEventListener('click', function() {
-    go('edit_track', track.track_id);
-  });
-  var food = this.data.food[track.food_id];
-  var time = ((track.time.split(':')[0] % 12) || 12) + ':' +
-    track.time.split(':')[1] + ' ' +
-    ((track.time.split(':')[0] < 12) ? 'am' : 'pm');
-  this.render_track_food(
-    container,
-    food.name,
-    track.quantity,
-    track.units,
-    track.points,
-    time,
-    food.img,
-    food.img_rotation
-  );
-  parent.appendChild(container);
-};
-layer.home.prototype.render_track_food =
-    function(parent, name, quantity, units, points, time, img, img_rotation) {
-  var container = $.createElement('div').style({
-    'border-bottom': '1px solid #eeeeee'
-  });
-  var table = $.table(img ? 3 : 2).style({
+  var table = $.table(3).style({
     'height': 40
   });
-  if (img) {
+  if (food.img) {
     table.tds[0].setAttribute({
       'width': 45
     }).appendChild($.createElement('img').style({
-      'width': 40
+      'width': 40,
+      'transform': 'rotate(' + (food.img_rotation || 0) + 'deg)'
     }).setAttribute({
-      'src': 'img/' + img
+      'src': 'img/' + food.img
     }));
+  } else {
+    table.tds[0].hide();
   }
-  table.tds[0].style({
+  table.tds[1].style({
     'padding-left': 5
   });
-  table.tds[img ? 1 : 0].appendChild($.createElement('div').innerHTML(
-    name
+  table.tds[1].appendChild($.createElement('div').innerHTML(
+    food.name
   ));
-  table.tds[img ? 1 : 0].appendChild($.createElement('div').style({
+  table.tds[1].appendChild($.createElement('div').style({
     'color': 'gray',
     'font-size': 10
   }).innerHTML(
-    (time ? (time + ' - ') : '') +
-    decimal_to_fraction(quantity) + ' ' + units
+    (opt_time ? (opt_time + ' - ') : '') +
+    decimal_to_fraction(opt_quantity || food.quantity) + ' ' +
+    (opt_units || food.units)
   ));
-  table.tds[img ? 2 : 1].style({
+  table.tds[2].style({
     'width': 60,
     'text-align': 'center'
   });
-  table.tds[img ? 2 : 1].innerHTML(+points);
+  var pts;
+  if (opt_points !== undefined) {
+    pts = opt_points;
+  } else if (food.points !== null) {
+    pts = food.points;
+  } else {
+    pts = points(
+      food.fat,
+      food.carbohydrates,
+      food.fiber,
+      food.protein
+    );
+  }
+  table.tds[2].innerHTML(+pts);
   container.appendChild(table);
   parent.appendChild(container);
+
 };
-layer.home.prototype.render_complete = function() {
-  if (this.contents_container) {
-    this.contents_container.style({
-      'margin-top': this.header_container.getBoundingClientRect().height
-    });
-    window.scrollTo(0, 0);
-  }
-};
-
-
-
-
-
-layer.menu = function() {};
-rocket.inherits(layer.menu, layer.home);
-layer.menu.prototype.render_loaded = function(parent) {
+layer.prototype.render_header = function(parent) {
   var container = $.createElement('div');
-  this.render_header(container);
-  this.render_items(container);
-  parent.appendChild(container);
-};
-layer.menu.prototype.render_header = function(parent) {
-  var container = $.createElement('div').style({
-    'position': 'fixed',
-    'top': 0
+  var table = $.table(2).style({
+    'border-bottom': '1px solid ' + dark_gray
   });
-  this.header_container = container;
-  this.render_header_menu_home(container);
-  parent.appendChild(container);
-};
-layer.menu.prototype.render_header_menu_home = function(parent) {
-  var container = $.createElement('div');
-  var table = $.table(2);
   table.tbody.style({
+    'line-height': 50,
     'text-align': 'center',
     'font-size': 18,
-    'color': 'white',
-    'background-color': '#005589',
-    'line-height': 60
+    'color': blue,
+    'background-color': white
   });
-  this.render_header_menu(table.tds[0]);
-  this.render_header_home(table.tds[1]);
+  this.render_header_home(table.tds[0]);
+  this.render_header_menu(table.tds[1]);
   container.appendChild(table);
   parent.appendChild(container);
 };
-layer.menu.prototype.render_header_menu = function(parent) {
+layer.prototype.render_header_home = function(parent) {
   var container = $.createElement('div');
-  container.innerHTML('&#8801; MENU');
-  container.addEventListener('click', function() {
-    go('menu');
-  });
-  parent.appendChild(container);
-};
-layer.menu.prototype.render_header_home = function(parent) {
-  var container = $.createElement('div');
-  container.innerHTML('&#8962; HOME');
+  container.innerHTML('Home');
   container.addEventListener('click', function() {
     go('home');
   });
   parent.appendChild(container);
 };
-layer.menu.prototype.render_items = function(parent) {
+layer.prototype.render_header_menu = function(parent) {
   var container = $.createElement('div');
-  this.contents_container = container;
-  var items = [
-    {
-      'name': 'Track Food',
-      'go': 'track_food'
-    },
-    {
-      'name': 'Create Food',
-      'go': 'create_food'
-    },
-    {
-      'name': 'Edit Food',
-      'go': 'edit_food'
-    },
-    {
-      'name': 'Quick Create Food',
-      'go': 'quick_create'
-    },
-    {
-      'name': 'Create Activity',
-      'go': 'create_activity'
-    },
-    {
-      'name': 'Update Weight',
-      'go': 'update_weight'
-    },
-    {
-      'name': 'Logout',
-      'go': 'logout'
-    }
-  ];
-  for (var i = 0; items[i]; ++i) {
-    this.render_item(container, items[i]);
-  }
+  container.innerHTML('&#8801; Menu');
+  container.addEventListener('click', function() {
+    go('menu');
+  });
   parent.appendChild(container);
 };
-layer.menu.prototype.render_item = function(parent, item) {
+layer.prototype.render_complete = function() {
+  if (this.contents_container && this.header_container) {
+    this.contents_container.style({
+      'margin-top': this.header_container.getBoundingClientRect().height
+    });
+    window.scrollTo(0, 0);
+  }
+  if (this.fat) {
+    this.fat.focus();
+  }
+  if (this.search) {
+    this.search.focus();
+  }
+  if (this.username) {
+    this.username.focus();
+  }
+};
+layer.prototype.search_string = '';
+layer.prototype.food_click_handler = function(food_id) {};
+layer.prototype.render_foods = function(parent) {
+  this.render_header_search(this.header_container);
+  this.render_header_switch(this.header_container);
+  var container = $.createElement('div');
+  this.render_foods_list(container);
+  parent.appendChild(container);
+};
+layer.prototype.render_foods_list = function(parent) {
+  var container = $.createElement('div');
+  var self = this;
+  container.live('div', 'click', function() {
+    var element = this;
+    while (container[0] !== element.parentNode) {
+      element = element.parentNode;
+    }
+    self.food_click_handler(foods[container.children().indexOf(element)].food_id);
+  });
+  this.foods_list_container = container;
+  var foods = [];
+  var search_string = this.search_string ?
+    this.search_string.toLowerCase().split(/\s+/g) :
+    null;
+  for (var food_id in this.data.food) {
+    var food = this.data.food[food_id];
+    var food_name_lowercase = food.name.toLowerCase();
+    if (
+      !search_string ||
+      search_string.map(function(str) {
+        return food_name_lowercase.indexOf(str);
+      }).filter(function(pos) {
+        return (pos === -1);
+      }).length === 0
+    ) {
+      if (
+        (this.switched === 'All') ||
+        (this.switched === 'Created') ||
+        (this.switched === 'Mine' && food.user_id == this.data.user.user_id) ||
+        (this.switched === 'Tracked' && food.date_time)
+      ) {
+        foods.push(food);
+      }
+    }
+  }
+  if (this.switched === 'Tracked') {
+    $.sort(foods, {'key': 'date_time', 'desc': true});
+  } else if (this.switched === 'Created') {
+    $.sort(foods, {'key': 'timestamp', 'desc': true});
+  } else {
+    $.sort(foods, 'name');
+  }
+  for (var i = 0; foods[i]; ++i) {
+    this.render_food(container, foods[i].food_id);
+  }
+  if (parent) {
+    parent.appendChild(container);
+    this.food_container = container;
+  } else {
+    this.food_container.parentNode().replaceChild(
+      container,
+      this.food_container
+    );
+    this.food_container = container;
+  }
+};
+layer.prototype.render_header_search = function(parent) {
   var container = $.createElement('div').style({
-    'border-bottom': '1px solid #eeeeee'
+    'padding': 5
   });
-  container.addEventListener('click', function() {
-    go(item.go);
+  var input = $.createElement('input').setAttribute({
+    'placeholder': 'Search'
+  }).style({
+    'border': '1px solid ' + gray
   });
-  var table = $.table(1).style({
-    'height': 50
+  this.search = input;
+  var self = this;
+  input.addEventListener('afterkeydown', function(e) {
+    if (self.search_string !== this.value) {
+      self.search_string = this.value;
+      self.render_foods_list();
+    }
+    if (
+      (e.type === 'keyup') &&
+      (e.which === $.KEY.enter) &&
+      (self.foods_list_container.children().length === 1)
+    ) {
+      self.foods_list_container.firstElementChild().dispatchEvent('click');
+    }
   });
-  table.tds[0].style({
-    'padding-left': 5
-  }).innerHTML(item.name);
+  container.appendChild(input);
+  parent.appendChild(container);
+};
+layer.prototype.switched = 'All';
+layer.prototype.render_header_switch = function(parent) {
+  var container = $.createElement('div').style({
+    'padding': '0 5px 5px'
+  });
+  var table = $.table(4).style({
+    'background-color': 'white',
+    'color': blue,
+    'border': '1px solid ' + blue,
+    'opacity': 0.9,
+    'border-radius': 5
+  });
+  table.tbody.style({
+    'line-height': 40,
+    'text-align': 'center'
+  });
+  var switches = [
+    {'name': 'All'},
+    {'name': 'Mine'},
+    {'name': 'Tracked'},
+    {'name': 'Created'}
+  ];
+  var self = this;
+  var switch_handler = function() {
+    for (var i = 0; switches[i] && switches[i].element; ++i) {
+      switches[i].element.style({
+        'background-color': '',
+        'color': ''
+      });
+    }
+    this.style.backgroundColor = blue;
+    this.style.color = 'white';
+    if (self.switched !== this.innerHTML) {
+      self.switched = this.innerHTML;
+      self.render_foods_list();
+      window.scrollTo(0, 0);
+    }
+  };
+  for (var i = 0; switches[i]; ++i) {
+    switches[i].element = table.tds[i].appendChild(
+      $.createElement('div').style({
+        'border-radius': 3
+      }).addEventListener(
+        'click',
+        switch_handler
+      ).innerHTML(
+        switches[i].name
+      )
+    );
+    if (switches[i].name === this.switched) {
+      switches[i].element.dispatchEvent('click');
+    }
+  }
   container.appendChild(table);
   parent.appendChild(container);
 };
-
-
-
-
-
-layer.food = function() {};
-rocket.inherits(layer.food, layer.menu);
-layer.food.prototype.render_points = function(parent) {
+layer.prototype.render_name_serving = function(parent, food_id) {
+  var container = $.createElement('div').style({
+    'text-align': 'center'
+  });
+  var food = this.data.food[food_id];
+  container.appendChild($.createElement('div').innerHTML(
+    food.name
+  ));
+  container.appendChild($.createElement('div').style({
+    'font-size': 12,
+    'color': 'gray'
+  }).innerHTML(
+    decimal_to_fraction(food.quantity) + ' ' + food.units
+  ));
+  parent.appendChild(container);
+};
+layer.prototype.render_quantity_units = function(parent) {
+  var container = $.createElement('div').style({
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
+  });
+  var table = $.table(3);
+  this.render_quantity(table);
+  this.render_units(table.tds[2]);
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.prototype.quantity_units_handler = function() {
+  if (this.food_id && !this.fat) {
+    var units = {};
+    for (var i in this.data.unit) {
+      units[this.data.unit[i].unit] = this.data.unit[i].multiplier;
+    }
+    var food = this.data.food[this.food_id];
+    var multiplier =
+      (this.quantity.value() * units[this.units.value()]) /
+      (food.quantity * units[food.units]);
+    if (food.points === null) {
+      this.points.innerHTML(points(
+        multiplier * food.fat,
+        multiplier * food.carbohydrates,
+        multiplier * food.fiber,
+        multiplier * food.protein
+      ));
+    } else {
+      this.points.innerHTML($.round(multiplier * food.points, 0));
+    }
+  }
+};
+layer.prototype.render_quantity = function(table) {
+  this.render_quantity_whole(table.tds[0]);
+  this.render_quantity_fraction(table.tds[1]);
+  var self = this;
+  this.quantity = {
+    'value': function(opt_val) {
+      if (arguments.length) {
+        self.quantity_whole.value(Math.floor(opt_val));
+        self.quantity_fraction.value('.' + ('' + +opt_val).split('.')[1]);
+      } else {
+        return +self.quantity_whole.value() + +self.quantity_fraction.value();
+      }
+    }
+  };
+  this.render_quantity_value();
+};
+layer.prototype.render_quantity_whole = function(parent) {
+  var container = $.createElement('div');
+  var select = $.createElement('select').style({
+    'direction': 'rtl'
+  });
+  this.quantity_whole = select;
+  for (var i = 0; i < 300; ++i) {
+    select.appendChild($.createElement('option').value(i).innerHTML(i));
+  }
+  var self = this;
+  select.addEventListener('keyup,change,blur', function() {
+    self.quantity_units_handler();
+  });
+  container.appendChild(select);
+  parent.appendChild(container);
+};
+layer.prototype.render_quantity_fraction = function(parent) {
+  var container = $.createElement('div');
+  var select = $.createElement('select');
+  this.quantity_fraction = select;
+  for (var i in fractions) {
+    select.appendChild($.createElement('option').value(i).innerHTML(
+      fractions[i]
+    ));
+  }
+  var self = this;
+  select.addEventListener('keyup,change,blur', function() {
+    self.quantity_units_handler();
+  });
+  container.appendChild(select);
+  parent.appendChild(container);
+};
+layer.prototype.render_quantity_value = function() {
+  this.quantity.value(1);
+};
+layer.prototype.render_units = function(parent) {
+  var container = $.createElement('div');
+  var select = $.createElement('select');
+  this.units = select;
+  var self = this;
+  var units = [];
+  for (var i in this.data.unit) {
+    units.push(this.data.unit[i].unit);
+  }
+  units.sort();
+  for (var i = 0; units[i]; ++i) {
+    select.appendChild($.createElement('option').innerHTML(units[i]));
+  }
+  select.addEventListener('keyup,change,blur', function() {
+    self.quantity_units_handler();
+  });
+  select.value('serving');
+  select.dispatchEvent('change');
+  container.appendChild(select);
+  parent.appendChild(container);
+};
+layer.prototype.render_date_time = function(parent) {
+  var container = $.createElement('div').style({
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
+  });
+  var table = $.table(2);
+  this.render_date(table.tds[0]);
+  this.render_time(table.tds[1]);
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.prototype.render_date = function(parent) {
+  var container = $.createElement('div');
+  var select = $.createElement('select').style({
+    'direction': 'rtl'
+  });
+  this.date = select;
+  var date = new Date();
+  for (var i = 0; i < 30; ++i) {
+    select.appendChild($.createElement('option').value(
+      date.getFullYear() + '-' +
+      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
+      $.padLeft(date.getDate(), 2, '0')
+    ).innerHTML(
+      (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear()
+    ));
+    date = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() - 1
+    );
+  }
+  container.appendChild(select);
+  parent.appendChild(container);
+};
+layer.prototype.render_time = function(parent) {
+  var container = $.createElement('div');
+  var select = $.createElement('select');
+  this.time = select;
+  for (var hour = 0; hour < 24; ++hour) {
+    for (var minute = 0; minute < 60; minute += 5) {
+      select.appendChild($.createElement('option').value(
+        $.padLeft(hour, 2, '0') + ':' +
+        $.padLeft(minute, 2, '0')
+      ).innerHTML(
+        ((hour % 12) || 12) + ':' +
+        $.padLeft(minute, 2, '0') + ' ' +
+        ((hour < 12) ? 'am' : 'pm')
+      ));
+    }
+  }
+  var now = new Date();
+  select.value(
+    $.padLeft(now.getHours(), 2, '0') + ':' +
+    $.padLeft(Math.floor(now.getMinutes() / 5) * 5, 2, '0')
+  );
+  container.appendChild(select);
+  parent.appendChild(container);
+};
+layer.prototype.render_points = function(parent) {
   var container = $.createElement('div').style({
     'text-align': 'center'
   });
@@ -759,259 +654,31 @@ layer.food.prototype.render_points = function(parent) {
   }).innerHTML('0'));
   parent.appendChild(container);
 };
-layer.food.prototype.select_style = {
-  'width': '100%',
-  'height': 40
-};
-layer.food.prototype.button_style = {
-  'width': '100%',
-  'height': 40
-};
-layer.food.prototype.render_quantity_units = function(parent) {
-  var container = $.createElement('div');
-  var table = $.table(3);
-  this.render_quantity(table);
-  this.render_units(table.tds[2]);
-  container.appendChild(table);
-  parent.appendChild(container);
-};
-layer.food.prototype.render_quantity = function(table) {
-  this.render_quantity_whole(table.tds[0]);
-  this.render_quantity_fraction(table.tds[1]);
-  var self = this;
-  this.quantity = {
-    'value': function(opt_val) {
-      if (arguments.length) {
-        self.quantity_whole.value(Math.floor(opt_val));
-        self.quantity_fraction.value(('' + (opt_val % 1)).replace('0.', '.'));
-      } else {
-        return +self.quantity_whole.value() + +self.quantity_fraction.value();
-      }
-    }
-  };
-  this.render_quantity_value();
-};
-layer.food.prototype.render_quantity_whole = function(parent) {
-  var container = $.createElement('div');
-  var select = $.createElement('select').style(this.select_style);
-  this.quantity_whole = select;
-  for (var i = 0; i < 300; ++i) {
-    select.appendChild($.createElement('option').value(i).innerHTML(i));
-  }
-  var self = this;
-  select.addEventListener('keyup,change,blur', function() {
-    self.points_select_handler();
-  });
-  container.appendChild(select);
-  parent.appendChild(container);
-};
-layer.food.prototype.render_quantity_fraction = function(parent) {
-  var container = $.createElement('div');
-  var select = $.createElement('select').style(this.select_style);
-  this.quantity_fraction = select;
-  for (var i in fractions) {
-    select.appendChild($.createElement('option').value(i).innerHTML(
-      fractions[i]
-    ));
-  }
-  var self = this;
-  select.addEventListener('keyup,change,blur', function() {
-    self.points_select_handler();
-  });
-  container.appendChild(select);
-  parent.appendChild(container);
-};
-layer.food.prototype.render_quantity_value = function() {
-  this.quantity.value(1);
-};
-layer.food.prototype.render_units = function(parent) {
-  var container = $.createElement('div');
-  var select = $.createElement('select').style(this.select_style);
-  this.units = select;
-  var self = this;
-  var units = [];
-  for (var i in this.data.unit) {
-    units.push(this.data.unit[i].unit);
-  }
-  units.sort();
-  for (var i = 0; units[i]; ++i) {
-    select.appendChild($.createElement('option').innerHTML(units[i]));
-  }
-  this.render_units_value();
-  select.addEventListener('keyup,change,blur', function() {
-    self.points_select_handler();
-  });
-  select.dispatchEvent('change');
-  container.appendChild(select);
-  parent.appendChild(container);
-};
-layer.food.prototype.render_units_value = function() {
-  this.units.value('serving');
-};
-layer.food.prototype.render_name = function(parent) {
-  var container = $.createElement('div').style({
-    'margin': '0 5px 0'
-  });
-  var table = $.table(2);
-  table.tds[0].setAttribute({
-    'width': 50
-  }).innerHTML('Name');
-  var input = $.createElement('input').style({
-    'width': '100%'
-  }).setAttribute({
-    'placeholder': 'name'
-  });
-  this.name = input;
-  table.tds[1].appendChild(input);
-  container.appendChild(table);
-  parent.appendChild(container);
-};
-layer.food.prototype.render_food_fields = function(parent) {
-  var container = $.createElement('div');
-  this.contents_container = container;
-  var table = $.table(2);
-  table.tds[0].setAttribute({
-    'width': 180
-  });
-  this.render_fat_carbohydrates_fiber_protein(table.tds[0]);
-  this.render_points(table.tds[1]);
-  container.appendChild(table);
-  this.render_name(container);
-  this.render_quantity_units(container);
-  this.render_save_buttons(container);
-  this.render_image(container);
-  parent.appendChild(container);
-};
-layer.food.prototype.render_fat_carbohydrates_fiber_protein = function(parent) {
-  var container = $.createElement('div').style({
-    'margin': '5px 5px 0'
-  });
-  var items = ['Fat', 'Carbohydrates', 'Fiber', 'Protein'];
-  for (var i = 0; items[i]; ++i) {
-    this.render_food_parameter(container, items[i]);
-  }
-  parent.appendChild(container);
-};
-layer.food.prototype.render_food_parameter = function(parent, item) {
-  var container = $.createElement('div');
-  var table = $.table(2);
-  table.tds[0].setAttribute({
-    'width': 100
-  });
-  table.tds[0].innerHTML(item);
-  var self = this;
-  var input = $.createElement('input').style({
-    'width': 80
-  }).setAttribute({
-    'type': 'tel',
-    'placeholder': 'grams'
-  }).addEventListener('afterkeydown,blur', function() {
-    this.value = this.value.replace(/[^\d\.]+/g, '.');
-    self.points.innerHTML(points(
-      self.fat.value() || 0,
-      self.carbohydrates.value() || 0,
-      self.fiber.value() || 0,
-      self.protein.value() || 0
-    ));
-  });
-  this[item.toLowerCase()] = input;
-  table.tds[1].appendChild(input);
-  container.appendChild(table);
-  parent.appendChild(container);
-};
-layer.food.prototype.get_args = function() {
-  return {
-    'name': this.name.value(),
-    'points': null,
-    'type': 'food',
-    'fat': this.fat.value(),
-    'carbohydrates': this.carbohydrates.value(),
-    'fiber': this.fiber.value(),
-    'protein': this.protein.value(),
-    'quantity': this.quantity.value(),
-    'units': this.units.value(),
-    'user_id': this.data.user.user_id,
-    'img': this.img || null,
-    'img_rotation': this.img_rotation || null
-  };
-};
-layer.food.prototype.render_save_buttons = function(parent) {
-  var container = $.createElement('div').style({
-    'margin-top': 5
-  });
-  var table = $.table(2);
-  var self = this;
-  var loading = false;
-  var create = function(callback) {
-    if (!loading) {
-      loading = true;
-      var args = self.get_args();;
-      api('food', 'insert', args, function(food_id) {
-        args.food_id = food_id;
-        args.timestamp = $.dateISOString();
-        self.data.food[food_id] = args;
-        self.update_data();
-        callback(food_id);
-      });
-    }
-  };
-  var button = $.createElement('button').style(this.button_style).innerHTML(
-    'CREATE'
-  ).addEventListener('click', function() {
-    create(function() {
-      delete self.img;
-      self.render();
-    });
-  });
-  table.tds[0].appendChild(button);
-  var button = $.createElement('button').style(this.button_style).innerHTML(
-    'CREATE & TRACK'
-  ).addEventListener('click', function(food_id) {
-    create(function(food_id) {
-      go('track_food', food_id);
-    });
-  });
-  table.tds[1].appendChild(button);
-  container.appendChild(table);
-  parent.appendChild(container);
-};
-layer.food.prototype.points_select_handler = function() {
-  this.points.innerHTML(points(
-    this.fat.value() || 0,
-    this.carbohydrates.value() || 0,
-    this.fiber.value() || 0,
-    this.protein.value() || 0
-  ));
-};
-layer.food.prototype.render_complete = function() {
-  layer.food.prototype.superClass_.render_complete.apply(this, arguments);
-  if (this.fat) {
-    this.fat.focus();
-  }
-};
-layer.food.prototype.render_image  = function(parent, opt_view_only) {
+layer.prototype.render_image = function(parent, opt_view_only) {
   var container = $.createElement('div').style({
     'text-align': 'center',
-    'margin-top': 5
+    'margin-top': 10
   });
   var self = this;
-  if (this.img) {
-    var image = $.createElement('img');
+  var food = this.data.food[this.food_id];
+  if (food && food.img) {
+    self.img = food.img;
+    self.img_rotation = food.img_rotation || 0;
+    var image = $.createElement('img').setAttribute({
+      'src': 'img/' + food.img
+    });
+    container.appendChild(image);
     var rotate = function(degrees) {
       image.style({
         'transform': 'rotate(' + degrees + 'deg)'
       });
     };
-    container.appendChild(image).setAttribute({
-      'src': 'img/' + this.img
-    });
-    if (this.this_class_name !== 'track_food') {
+    rotate(self.img_rotation);
+    if (!opt_view_only) {
       image.addEventListener('click', function() {
-        self.img_rotation = (self.img_rotation + 90) % 360;
-        rotate(self.img_rotation);
+        rotate(self.img_rotation = (self.img_rotation + 90) % 360);
       });
     }
-    rotate(this.img_rotation);
   } else if (!opt_view_only) {
     var file = $.createElement('input').style({
       'width': '100%'
@@ -1044,7 +711,13 @@ layer.food.prototype.render_image  = function(parent, opt_view_only) {
             var context = canvas[0].getContext('2d');
             context.drawImage(image[0], 0, 0, width, height);
             var shrinked = canvas[0].toDataURL('image/jpeg');
-            container.appendChild($.createElement('img').setAttribute({
+            var shrinked_image = $.createElement('img').addEventListener('click', function() {
+              shrinked_image.style({
+                'transform': 'rotate(' + (self.img_rotation = (self.img_rotation + 90) % 360) + 'deg)'
+              });
+            });
+            shrinked_image.addEventListener('click', rotate_handler);
+            container.appendChild(shrinked_image.setAttribute({
               'src': shrinked
             }));
             api('img', 'upload', shrinked.substr(23), function(filename) {
@@ -1057,187 +730,598 @@ layer.food.prototype.render_image  = function(parent, opt_view_only) {
     });
     container.appendChild(file);
   }
+
   parent.appendChild(container);
 };
-
-
-
-
-
-layer.food_search = function() {};
-rocket.inherits(layer.food_search, layer.food);
-layer.food_search.prototype.render_header = function(parent) {
+layer.prototype.render_fat_carbohydrates_fiber_protein = function(parent) {
   var container = $.createElement('div').style({
-    'position': 'fixed',
-    'top': 0
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-right': '1px solid ' + gray
   });
-  this.header_container = container;
-  this.render_header_menu_home(container);
-  if (!this.food_id) {
-    this.render_header_search(container);
-    this.render_header_switch(container);
+  var items = ['Fat', 'Carbohydrates', 'Fiber', 'Protein'];
+  for (var i = 0; items[i]; ++i) {
+    this.render_food_parameter(container, items[i]);
   }
   parent.appendChild(container);
 };
-layer.food_search.prototype.search_string = '';
-layer.food_search.prototype.render_header_search = function(parent) {
+layer.prototype.render_food_parameter = function(parent, item) {
   var container = $.createElement('div').style({
-    'padding': 5
-  });
-  var input = $.createElement('input').setAttribute({
-    'placeholder': 'Search Food'
-  }).style({
-    'width': '100%'
-  });
-  this.search = input;
-  var self = this;
-  input.addEventListener('afterkeydown', function(e) {
-    if (self.search_string !== this.value) {
-      self.search_string = this.value;
-      self.render_foods();
-    }
-    if (
-      (e.type === 'keyup') &&
-      (e.which === $.KEY.enter) &&
-      (self.foods_container.children().length === 1)
-    ) {
-      self.foods_container.firstElementChild().dispatchEvent('click');
-    }
-  });
-  container.appendChild(input);
-  parent.appendChild(container);
-};
-layer.food_search.prototype.switched = 'All';
-layer.food_search.prototype.render_header_switch = function(parent) {
-  var container = $.createElement('div').style({
-    'padding': '0 5px 5px'
-  });
-  var table = $.table(4).style({
     'background-color': 'white',
-    'border': '1px solid #cccccc',
-    'opacity': 0.9,
-    'border-radius': 10
+    'border-bottom': '1px solid ' + gray,
+    'padding-left': 10
   });
-  table.tbody.style({
-    'line-height': 40,
-    'text-align': 'center'
-  });
-  var switches = [
-    {'name': 'All'},
-    {'name': 'Mine'},
-    {'name': 'Tracked'},
-    {'name': 'Created'}
-  ];
+  var table = $.table(2);
+  table.tds[0].innerHTML(item.replace('Carbohydrates', 'Carbs'));
   var self = this;
-  var switch_handler = function() {
-    for (var i = 0; switches[i] && switches[i].element; ++i) {
-      switches[i].element.style({
-        'background-color': '',
-        'color': ''
-      });
-    }
-    this.style.backgroundColor = '#005589';
-    this.style.color = 'white';
-    if (self.switched !== this.innerHTML) {
-      self.switched = this.innerHTML;
-      self.render_foods();
-      window.scrollTo(0, 0);
-    }
-  };
-  for (var i = 0; switches[i]; ++i) {
-    switches[i].element = table.tds[i].appendChild(
-      $.createElement('div').style({
-        'border-radius': 10
-      }).addEventListener(
-        'click',
-        switch_handler
-      ).innerHTML(
-        switches[i].name
-      )
-    );
-    if (switches[i].name === this.switched) {
-      switches[i].element.dispatchEvent('click');
-    }
-  }
+  var input = $.createElement('input').setAttribute({
+    'type': 'tel',
+    'placeholder': 'grams'
+  }).addEventListener('afterkeydown,blur', function() {
+    this.value = this.value.replace(/[^\d\.]+/g, '.');
+    self.points.innerHTML(points(
+      self.fat.value() || 0,
+      self.carbohydrates.value() || 0,
+      self.fiber.value() || 0,
+      self.protein.value() || 0
+    ));
+  });
+  this[item.toLowerCase()] = input;
+  table.tds[1].appendChild(input);
   container.appendChild(table);
   parent.appendChild(container);
 };
-layer.food_search.prototype.render_foods = function(parent) {
-  var container = $.createElement('div');
-  var self = this;
-  container.live('div', 'click', function() {
-    var element = this;
-    while (container[0] !== element.parentNode) {
-      element = element.parentNode;
-    }
-    go(self.this_class_name, foods[container.children().indexOf(element)].food_id);
+layer.prototype.render_name = function(parent) {
+  var container = $.createElement('div').style({
+    'margin-top': 10,
+    'background-color': 'white',
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
   });
-  this.foods_container = container;
-  var foods = [];
-  var search_string = this.search_string.toLowerCase();
-  for (var food_id in this.data.food) {
-    var food = this.data.food[food_id];
-    if (
-      !search_string ||
-      (food.name.toLowerCase().indexOf(search_string) !== -1)
-    ) {
-      if (
-        (this.switched === 'All') ||
-        (this.switched === 'Created') ||
-        (this.switched === 'Mine' && food.user_id == this.data.user.user_id) ||
-        (this.switched === 'Tracked' && food.date_time)
-      ) {
-        foods.push(food);
-      }
+  var table = $.table(2);
+  table.tds[0].style({
+    'padding-left': 10
+  }).setAttribute({
+    'width': 50
+  }).innerHTML('Name');
+  var input = $.createElement('input').setAttribute({
+    'placeholder': 'name'
+  });
+  this.name = input;
+  table.tds[1].appendChild(input);
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.prototype.get_food_arguments = function() {
+  return {
+    'name': this.name.value(),
+    'points': null,
+    'type': 'food',
+    'fat': this.fat.value(),
+    'carbohydrates': this.carbohydrates.value(),
+    'fiber': this.fiber.value(),
+    'protein': this.protein.value(),
+    'quantity': this.quantity.value(),
+    'units': this.units.value(),
+    'user_id': this.data.user.user_id,
+    'img': this.img,
+    'img_rotation': this.img_rotation
+  };
+};
+
+
+
+
+layer.login = function(opt_username) {
+  this.opt_username = opt_username;
+};
+rocket.inherits(layer.login, layer);
+layer.login.prototype.render_header = function(parent) {
+  var container = $.createElement('div');
+  var table = $.table(2).style({
+    'height': 50,
+    'background-color': white,
+    'border-bottom': '1px solid ' + dark_gray
+  });
+  table.tds[0].style({
+    'font-weight': 'bold',
+    'text-align': 'center'
+  }).innerHTML('Weight Watchers');
+  table.tds[1].setAttribute({
+    'width': '35%'
+  });
+  this.render_login_button(table.tds[1]);
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.login.prototype.render_contents = function(parent) {
+  $('body').style({
+    'background-color': light_gray
+  });
+  var container = $.createElement('div');
+  var table = $.table(2, 2).style({
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray,
+    'margin-top': 30,
+    'background-color': 'white'
+  });
+  table.trs[0].tds[0].setAttribute({
+    'width': '35%'
+  });
+  table.trs[0].tds[0].style({'padding': 10}).innerHTML('User Name');
+  table.trs[1].tds[0].style({'padding': 10}).innerHTML('Password');
+  this.render_username(table.trs[0].tds[1]);
+  this.render_password(table.trs[1].tds[1]);
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.login.prototype.render_username = function(parent) {
+  var container = $.createElement('div');
+  var input = $.createElement('input').setAttribute({
+    'placeholder': 'User Name'
+  });
+  var self = this;
+  input.addEventListener('keydown', function(e) {
+    if (e.which === $.KEY.enter) {
+      self.login.dispatchEvent('click');
+    }
+  });
+  input.value(this.opt_username || '');
+  this.username = input;
+  container.appendChild(input);
+  parent.appendChild(container);
+};
+layer.login.prototype.render_password = function(parent) {
+  var container = $.createElement('div');
+  var input = $.createElement('input').setAttribute({
+    'placeholder': 'Password',
+    'type': 'password'
+  });
+  var self = this;
+  input.addEventListener('keydown', function(e) {
+    if (e.which === $.KEY.enter) {
+      self.login.dispatchEvent('click');
+    }
+  });
+  this.password = input;
+  container.appendChild(input);
+  parent.appendChild(container);
+};
+layer.login.prototype.render_login_button = function(parent) {
+  var container = $.createElement('div');
+  var button = $.createElement('button').innerHTML('Login').style({
+    'background-color': white
+  });
+  this.login = button;
+  var loading = false;
+  var self = this;
+  button.addEventListener('click', function() {
+    if (!loading) {
+      loading = true;
+      api('user', 'login', {
+        'username': self.username.value(),
+        'password': self.password.value()
+      }, function(key) {
+        if (key) {
+          $.cookie('key', key, 90);
+          go('home');
+        } else {
+          go('login', self.username.value());
+        }
+      });
+    }
+  });
+  container.appendChild(button);
+  parent.appendChild(container);
+};
+
+
+
+
+
+layer.home = function() {
+  var today = new Date();
+  this.date =
+    today.getFullYear() + '-' +
+    $.padLeft(today.getMonth() + 1, 2, '0') + '-' +
+    $.padLeft(today.getDate(), 2, '0');
+};
+rocket.inherits(layer.home, layer);
+layer.home.prototype.render_contents = function(parent) {
+  var container = $.createElement('div');
+  this.render_tracks(container);
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header = function(parent) {
+  var container = $.createElement('div');
+  this.render_header_navigation(container);
+  this.render_header_points(container);
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_navigation = function(parent) {
+  var container = $.createElement('div').style({
+    'border-bottom': '1px solid ' + dark_gray
+  });
+  var table = $.table(5).style({
+    'height': 50
+  });
+  table.tbody.style({
+    'text-align': 'center',
+    'color': blue,
+    'background-color': white
+  });
+  this.render_header_yesterday_tomorrow(table.tds[0], -1);
+  this.render_header_menu_button(table.tds[1]);
+  this.render_header_date(table.tds[2]);
+  this.render_header_track_button(table.tds[3]);
+  this.render_header_yesterday_tomorrow(table.tds[4], 1);
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_yesterday_tomorrow = function(parent, offset) {
+  var container = $.createElement('div');
+  container.appendChild($.createElement('img').setAttribute({
+    'src': 'img/arrow_' + ((offset < 0) ? 'back' : 'forward') + '.png'
+  }));
+  var self = this;
+  container.addEventListener('click', function() {
+    var date = $.strToDate(self.date);
+    date = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() + offset
+    );
+    self.date =
+      date.getFullYear() + '-' +
+      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
+      $.padLeft(date.getDate(), 2, '0');
+    self.render();
+  });
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_menu_button = function(parent) {
+  var container = $.createElement('div').style({
+    'font-size': 32,
+    'line-height': 50
+  });
+  container.innerHTML('&#x2261;');
+  container.addEventListener('click', function() {
+    go('menu');
+  });
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_date = function(parent) {
+  var container = $.createElement('div').style({
+    'color': 'black'
+  });
+  container.addEventListener('click', function() {
+    (new layer.home()).render();
+  });
+  container.appendChild($.createElement('div').innerHTML(
+    ('' + $.strToDate(this.date)).substr(0, 3)
+  ));
+  container.appendChild($.createElement('div').innerHTML(
+    this.date.split('-')[1] + '/' +
+    this.date.split('-')[2]
+  ));
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_track_button = function(parent) {
+  var container = $.createElement('div').style({
+    'font-size': 42,
+    'line-height': 50
+  });
+  container.innerHTML('+');
+  container.addEventListener('click', function() {
+    go('track');
+  });
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_points = function(parent) {
+  var container = $.createElement('div').style({
+    'border-bottom': '1px solid ' + dark_gray,
+    'opacity': 0.9
+  });
+  var table = $.table(5).style({
+    'background-color': white,
+    'height': 60
+  });
+  table.tbody.style({
+    'text-align': 'center'
+  });
+  this.render_header_points_remaining(table.tds[0]);
+  this.render_header_points_used(table.tds[1]);
+  this.render_header_points_daily(table.tds[2]);
+  this.render_header_points_weekly(table.tds[3]);
+  this.render_header_points_activity(table.tds[4]);
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.home.prototype.points_label = {
+  'color': 'gray',
+  'font-size': 8
+};
+layer.home.prototype.points_value = {
+  'color': orange,
+  'font-size': 28
+};
+layer.home.prototype.right_border = {
+  'border-right': '1px dotted ' + dark_gray
+};
+layer.home.prototype.get_daily_points = function(date) {
+  var weight = 0;
+  for (var i in this.data.weight) {
+    if (this.data.weight[i].timestamp.substr(0, 10) <= date) {
+      weight = this.data.weight[i].weight;
     }
   }
-  if (this.switched === 'Tracked') {
-    $.sort(foods, {'key': 'date_time', 'desc': true});
-  } else if (this.switched === 'Created') {
-    $.sort(foods, {'key': 'timestamp', 'desc': true});
+  return user_points(
+    this.data.user.gender,
+    this.data.user.height,
+    weight,
+    this.data.user.date_of_birth,
+    date
+  );
+};
+layer.home.prototype.get_points_used = function(date) {
+  if (this.data.track_date[date]) {
+    return this.data.track_date[date].map(function(row) {
+      return +row.points;
+    }).reduce(function(a, b) {
+      return a + b;
+    });
   } else {
-    $.sort(foods, 'name');
-  }
-  for (var i = 0; foods[i]; ++i) {
-    this.render_food(container, foods[i]);
-  }
-  if (parent) {
-    parent.appendChild(container);
-    this.render_foods_container = container;
-  } else {
-    this.render_foods_container.parentNode().replaceChild(
-      container,
-      this.render_foods_container
-    );
-    this.render_foods_container = container;
+    return 0;
   }
 };
-layer.food_search.prototype.render_food = function(parent, food) {
+layer.home.prototype.get_points_remaining = function(date) {
+  return this.get_daily_points(date) - this.get_points_used(date);
+};
+layer.home.prototype.render_header_points_remaining = function(parent) {
+  var container = $.createElement('div').style(this.right_border);
+  container.appendChild($.createElement('div').style(
+    this.points_label
+  ).innerHTML(
+    'Daily<br/>Remaining'
+  ));
+  container.appendChild($.createElement('div').style(
+    this.points_value
+  ).innerHTML(
+    this.get_points_remaining(this.date)
+  ));
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_points_used = function(parent) {
+  var container = $.createElement('div').style(this.right_border);
+  container.appendChild($.createElement('div').style(
+    this.points_label
+  ).innerHTML(
+    'Daily<br/>Used'
+  ));
+  container.appendChild($.createElement('div').style(
+    this.points_value
+  ).innerHTML(
+    this.get_points_used(this.date)
+  ));
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_points_daily = function(parent) {
+  var container = $.createElement('div').style(this.right_border);
+  container.appendChild($.createElement('div').style(
+    this.points_label
+  ).innerHTML(
+    'Daily<br/>Points'
+  ));
+  container.appendChild($.createElement('div').style(
+    this.points_value
+  ).innerHTML(
+    this.get_daily_points(this.date)
+  ));
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_points_weekly = function(parent) {
+  var container = $.createElement('div').style(this.right_border);
+  container.appendChild($.createElement('div').style(
+    this.points_label
+  ).innerHTML(
+    'Weekly<br/>Remaining'
+  ));
+  var date = $.strToDate(this.date);
+  var weekly_points = 49;
+  do {
+    var daily_points_remaining = this.get_points_remaining(
+      date.getFullYear() + '-' +
+      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
+      $.padLeft(date.getDate(), 2, '0')
+    );
+    if (daily_points_remaining < 0) {
+      weekly_points += daily_points_remaining;
+    }
+    date = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
+  } while (('' + date).substr(0, 3) !== 'Sat');
+  container.appendChild($.createElement('div').style(
+    this.points_value
+  ).innerHTML(
+    weekly_points
+  ));
+  parent.appendChild(container);
+};
+layer.home.prototype.render_header_points_activity = function(parent) {
   var container = $.createElement('div');
-  this.render_track_food(
+  container.appendChild($.createElement('div').style(
+    this.points_label
+  ).innerHTML(
+    'Activity<br/>Earned'
+  ));
+  var date = $.strToDate(this.date);
+  var activity_earned = 0;
+  do {
+    var date_string = date.getFullYear() + '-' +
+      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
+      $.padLeft(date.getDate(), 2, '0');
+    if (this.data.track_date[date_string]) {
+      for (var i = 0; this.data.track_date[date_string][i]; ++i) {
+        var track = this.data.track_date[date_string][i];
+        var food = this.data.food[track.food_id];
+        if (food.type === 'activity') {
+          activity_earned += -1 * track.points;
+        }
+      }
+    }
+    date = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
+  } while (('' + date).substr(0, 3) !== 'Sat');
+  container.appendChild($.createElement('div').style(
+    this.points_value
+  ).innerHTML(
+    activity_earned
+  ));
+  parent.appendChild(container);
+};
+layer.home.prototype.render_tracks = function(parent) {
+  var container = $.createElement('div');
+  var tracks = this.data.track_date[this.date] || [];
+  var rendered = {};
+  for (var i = 0; tracks[i]; ++i) {
+    this.render_track_header(container, tracks[i], rendered);
+    this.render_track(container, tracks[i]);
+  }
+  parent.appendChild(container);
+};
+layer.home.prototype.render_track_header = function(parent, track, rendered) {
+  var container = $.createElement('div').style({
+    'background-color': light_gray,
+    'padding': '5px 10px',
+    'color': 'gray',
+    'font-size': 10
+  });
+  var headers = {
+    '11': 'Breakfast',
+    '16': 'Lunch',
+    '22': 'Dinner',
+    '24': 'Dessert'
+  };
+  for (var hour in headers) {
+    if (track.time < hour) {
+      if (!rendered[headers[hour]]) {
+        rendered[headers[hour]] = true;
+        parent.appendChild(container.innerHTML(headers[hour]));
+      }
+      break;
+    }
+  }
+};
+layer.home.prototype.render_track = function(parent, track) {
+  var container = $.createElement('div');
+  container.addEventListener('click', function() {
+    go('edit_track', track.track_id);
+  });
+  this.render_food(
     container,
-    food.name,
-    food.quantity,
-    food.units,
-    (food.points === null) ?
-      points(
-        food.fat,
-        food.carbohydrates,
-        food.fiber,
-        food.protein
-      ) :
-      food.points,
-    null,
-    food.img,
-    food.img_rotation
+    track.food_id,
+    track.quantity,
+    track.units,
+    ((track.time.split(':')[0] % 12) || 12) + ':' +
+      track.time.split(':')[1] + ' ' +
+      ((track.time.split(':')[0] < 12) ? 'am' : 'pm'),
+    track.points
   );
   parent.appendChild(container);
 };
-layer.food_search.prototype.render_complete = function() {
-  layer.food_search.prototype.superClass_.render_complete.apply(this, arguments);
-  if (this.data && this.search) {
-    this.search.focus();
+
+
+
+
+
+layer.menu = function() {};
+rocket.inherits(layer.menu, layer);
+layer.menu.prototype.render_contents = function(parent) {
+  $('body').style({
+    'background-color': light_gray
+  });
+  var container = $.createElement('div');
+  this.render_menu_items(container);
+  parent.appendChild(container);
+};
+layer.menu.prototype.render_menu_items = function(parent) {
+  var container = $.createElement('div').style({
+    'margin-top': 30,
+    'border-top': '1px solid ' + gray
+  });
+  var items = [
+    {
+      'name': 'Track',
+      'go': 'track'
+    },
+    'spacer',
+    {
+      'name': 'Create Food',
+      'go': 'create_food'
+    },
+    {
+      'name': 'Edit Food',
+      'go': 'edit_food'
+    },
+    {
+      'name': 'Quick Create Food',
+      'go': 'quick_create'
+    },
+    'spacer',
+    {
+      'name': 'Create Activity',
+      'go': 'create_activity'
+    },
+    {
+      'name': 'Create Recipe',
+      'go': 'create_recipe'
+    },
+    'spacer',
+    {
+      'name': 'Update Weight',
+      'go': 'update_weight'
+    },
+    'spacer',
+    {
+      'name': 'Logout',
+      'go': 'logout'
+    }
+  ];
+  for (var i = 0; items[i]; ++i) {
+    if (items[i] === 'spacer') {
+      this.render_menu_spacer(container);
+    } else {
+      this.render_menu_item(container, items[i]);
+    }
   }
+  parent.appendChild(container);
+};
+layer.menu.prototype.render_menu_item = function(parent, item) {
+  var container = $.createElement('div').style({
+    'border-bottom': '1px solid ' + gray,
+    'background-color': 'white'
+  });
+  container.addEventListener('click', function() {
+    go(item.go);
+  });
+  var table = $.table(2).style({
+    'height': 42
+  });
+  table.tds[0].style({
+    'padding-left': 10
+  }).innerHTML(item.name);
+  table.tds[1].setAttribute({
+    'width': 30
+  }).appendChild($.createElement('img').setAttribute({
+    'src': 'img/arrow_right.png'
+  }));
+  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.menu.prototype.render_menu_spacer = function(parent) {
+  var container = $.createElement('div').style({
+    'height': 35,
+    'border-bottom': '1px solid ' + gray
+  });
+  parent.appendChild(container);
 };
 
 
@@ -1259,14 +1343,12 @@ layer.logout.prototype.render_complete = function() {
 
 
 
-layer.track_food = function(opt_food_id) {
+layer.track = function(opt_food_id) {
   this.food_id = opt_food_id
 };
-rocket.inherits(layer.track_food, layer.food_search);
-layer.track_food.prototype.render_loaded = function(parent) {
+rocket.inherits(layer.track, layer);
+layer.track.prototype.render_contents = function(parent) {
   var container = $.createElement('div');
-  this.contents_container = container;
-  this.render_header(container);
   if (this.food_id) {
     this.render_track(container);
   } else {
@@ -1274,132 +1356,49 @@ layer.track_food.prototype.render_loaded = function(parent) {
   }
   parent.appendChild(container);
 };
-layer.track_food.prototype.this_class_name = 'track_food';
-layer.track_food.prototype.render_track = function(parent) {
+layer.track.prototype.food_click_handler = function(food_id) {
+  go('track', food_id);
+};
+layer.track.prototype.render_track = function(parent) {
+  var container = $.createElement('div');
+  this.render_track_name_points(container);
+  this.render_track_inputs(container);
+  this.render_image(container, true);
+  parent.appendChild(container);
+};
+layer.track.prototype.render_track_name_points = function(parent) {
   var container = $.createElement('div');
   var table = $.table(2).style({
     'height': 100
   });
-  this.render_name_serving(table.tds[0]);
+  this.render_name_serving(table.tds[0], this.food_id);
+  container.appendChild(table);
   this.render_points(table.tds[1]);
-  container.appendChild(table);
+  parent.appendChild(container);
+};
+layer.track.prototype.render_track_inputs = function(parent) {
+  var container = $.createElement('div');
   this.render_quantity_units(container);
-  var table = $.table(2);
-  this.render_date(table.tds[0]);
-  this.render_time(table.tds[1]);
-  container.appendChild(table);
+  var food = this.data.food[this.food_id];
+  this.quantity.value(food.quantity);
+  this.units.value(food.units);
+  this.quantity_units_handler();
+  this.render_date_time(container);
   this.render_track_button(container);
-  var food = this.data.food[this.food_id];
-  this.img = food.img;
-  this.img_rotation = food.img_rotation;
-  this.render_image(container, true);
   parent.appendChild(container);
 };
-layer.track_food.prototype.render_name_serving = function(parent) {
+layer.track.prototype.render_track_button = function(parent) {
   var container = $.createElement('div').style({
-    'text-align': 'center'
-  });
-  var food = this.data.food[this.food_id];
-  container.appendChild($.createElement('div').style({
-    'font-size': 12,
-    'color': '#005589'
-  }).innerHTML(
-    'TRACK FOOD'
-  ));
-  container.appendChild($.createElement('div').style({
-    'font-size': 14
-  }).innerHTML(
-    food.name
-  ));
-  container.appendChild($.createElement('div').style({
-    'font-size': 12,
-    'color': 'gray'
-  }).innerHTML(
-    decimal_to_fraction(food.quantity) + ' ' + food.units
-  ));
-  parent.appendChild(container);
-};
-layer.track_food.prototype.points_select_handler = function() {
-  var units = {};
-  for (var i in this.data.unit) {
-    units[this.data.unit[i].unit] = this.data.unit[i].multiplier;
-  }
-  var food = this.data.food[this.food_id];
-  var multiplier =
-    (this.quantity.value() * units[this.units.value()]) /
-    (food.quantity * units[food.units]);
-  if (food.points === null) {
-    this.points.innerHTML(points(
-      multiplier * food.fat,
-      multiplier * food.carbohydrates,
-      multiplier * food.fiber,
-      multiplier * food.protein
-    ));
-  } else {
-    this.points.innerHTML($.round(multiplier * food.points, 0));
-  }
-};
-layer.track_food.prototype.render_date = function(parent) {
-  var container = $.createElement('div');
-  var select = $.createElement('select').style(this.select_style);
-  this.date = select;
-  var date = new Date();
-  for (var i = 0; i < 30; ++i) {
-    select.appendChild($.createElement('option').value(
-      date.getFullYear() + '-' +
-      $.padLeft(date.getMonth() + 1, 2, '0') + '-' +
-      $.padLeft(date.getDate(), 2, '0')
-    ).innerHTML(
-      (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear()
-    ));
-    date = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate() - 1
-    );
-  }
-  this.render_date_value();
-  container.appendChild(select);
-  parent.appendChild(container);
-};
-layer.track_food.prototype.render_date_value = function() {};
-layer.track_food.prototype.render_time = function(parent) {
-  var container = $.createElement('div');
-  var select = $.createElement('select').style(this.select_style);
-  this.time = select;
-  for (var hour = 0; hour < 24; ++hour) {
-    for (var minute = 0; minute < 60; minute += 5) {
-      select.appendChild($.createElement('option').value(
-        $.padLeft(hour, 2, '0') + ':' +
-        $.padLeft(minute, 2, '0')
-      ).innerHTML(
-        ((hour % 12) || 12) + ':' +
-        $.padLeft(minute, 2, '0') + ' ' +
-        ((hour < 12) ? 'am' : 'pm')
-      ));
-    }
-  }
-  this.render_time_value();
-  container.appendChild(select);
-  parent.appendChild(container);
-};
-layer.track_food.prototype.render_time_value = function() {
-  var now = new Date();
-  this.time.value(
-    $.padLeft(now.getHours(), 2, '0') + ':' +
-    $.padLeft(Math.floor(now.getMinutes() / 5) * 5, 2, '0')
-  );
-};
-layer.track_food.prototype.render_track_button = function(parent) {
-  var container = $.createElement('div').style({
-    'margin-top': 5
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
   });
   var loading = false;
   var self = this;
   var button = $.createElement('button').style(
     this.select_style
   ).innerHTML(
-    'TRACK'
+    'Track'
   ).addEventListener('click', function() {
     if (!loading) {
       loading = true;
@@ -1423,41 +1422,27 @@ layer.track_food.prototype.render_track_button = function(parent) {
   container.appendChild(button);
   parent.appendChild(container);
 };
-layer.track_food.prototype.render_quantity_value = function() {
-  this.quantity.value(+this.data.food[this.food_id].quantity);
-};
-layer.track_food.prototype.render_units_value = function() {
-  this.units.value(this.data.food[this.food_id].units);
-};
-
-
 
 
 
 layer.edit_track = function(track_id) {
   this.track_id = track_id;
-  this.food_id = -1;
 };
-rocket.inherits(layer.edit_track, layer.track_food);
-layer.edit_track.prototype.render_loaded = function(parent) {
+rocket.inherits(layer.edit_track, layer.track);
+layer.edit_track.prototype.render_contents = function(parent) {
   this.food_id = this.data.track[this.track_id].food_id;
-  layer.edit_track.prototype.superClass_.render_loaded.apply(this, arguments);
-};
-layer.edit_track.prototype.render_quantity_value = function() {
-  this.quantity.value(+this.data.track[this.track_id].quantity);
-};
-layer.edit_track.prototype.render_units_value = function() {
+  layer.track.prototype.render_contents.apply(this, arguments);
+  this.quantity.value(this.data.track[this.track_id].quantity);
   this.units.value(this.data.track[this.track_id].units);
-};
-layer.edit_track.prototype.render_date_value = function() {
   this.date.value(this.data.track[this.track_id].date);
-};
-layer.edit_track.prototype.render_time_value = function() {
+  this.quantity_units_handler();
   this.time.value(this.data.track[this.track_id].time.substr(0, 5));
 };
 layer.edit_track.prototype.render_track_button = function(parent) {
   var container = $.createElement('div').style({
-    'margin-top': 5
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
   });
   var loading = false;
   var self = this;
@@ -1465,7 +1450,7 @@ layer.edit_track.prototype.render_track_button = function(parent) {
   var button = $.createElement('button').style(
     this.select_style
   ).innerHTML(
-    'DELETE'
+    'Delete'
   ).addEventListener('click', function() {
     if (!loading) {
       api('track', 'delete', self.track_id, function() {
@@ -1479,7 +1464,7 @@ layer.edit_track.prototype.render_track_button = function(parent) {
   var button = $.createElement('button').style(
     this.select_style
   ).innerHTML(
-    'UPDATE'
+    'Update'
   ).addEventListener('click', function() {
     if (!loading) {
       loading = true;
@@ -1506,122 +1491,230 @@ layer.edit_track.prototype.render_track_button = function(parent) {
 
 
 
-
-
 layer.create_food = function() {};
-rocket.inherits(layer.create_food, layer.food);
-layer.create_food.prototype.render_loaded = function(parent) {
+rocket.inherits(layer.create_food, layer);
+layer.create_food.prototype.render_contents = function(parent) {
   var container = $.createElement('div');
-  this.render_header(container);
-  this.render_food_fields(container);
-  parent.appendChild(container);
-};
-
-
-
-
-
-
-layer.quick_create = function() {};
-rocket.inherits(layer.quick_create, layer.create_food);
-layer.quick_create.prototype.render_loaded = function(parent) {
-  var container = $.createElement('div');
-  this.render_header(container);
-  this.render_fields(container);
-  parent.appendChild(container);
-};
-layer.quick_create.prototype.render_fields = function(parent) {
-  var container = $.createElement('div');
-  this.contents_container = container;
-  this.render_points(container);
+  var table = $.table(2);
+  this.render_fat_carbohydrates_fiber_protein(table.tds[0]);
+  this.render_points(table.tds[1]);
+  container.appendChild(table);
   this.render_name(container);
   this.render_quantity_units(container);
-  this.render_save_buttons(container);
+  this.render_create_create_track(container);
+  this.render_image(container);
   parent.appendChild(container);
 };
-layer.quick_create.prototype.render_points = function(parent) {
+layer.create_food.prototype.render_create_create_track = function(parent) {
   var container = $.createElement('div').style({
-    'padding-top': 5,
-    'margin': '0 5px'
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
   });
   var table = $.table(2);
-  table.tds[0].setAttribute({
-    'width': 50
-  }).innerHTML('Points');
-  var select = $.createElement('select').style(this.select_style);
-  this.points = select;
-  for (var i = 0; i < 100; ++i) {
-    select.appendChild($.createElement('option').innerHTML(i));
+  var self = this;
+  var loading = false;
+  var create = function(callback) {
+    if (!loading) {
+      loading = true;
+      var args = self.get_food_arguments();;
+      api('food', 'insert', args, function(food_id) {
+        args.food_id = food_id;
+        args.timestamp = $.dateISOString();
+        self.data.food[food_id] = args;
+        self.update_data();
+        callback(food_id);
+      });
+    }
+  };
+  var button = $.createElement('button').innerHTML(
+    'Create'
+  ).addEventListener('click', function() {
+    create(function() {
+      delete self.img;
+      self.render();
+    });
+  });
+  table.tds[0].appendChild(button);
+  var button = $.createElement('button').innerHTML(
+    'Create & Track'
+  ).addEventListener('click', function(food_id) {
+    create(function(food_id) {
+      go('track', food_id);
+    });
+  });
+  table.tds[1].appendChild(button);
+  container.appendChild(table);
+  parent.appendChild(container);
+}
+
+
+
+layer.edit_food = function(opt_food_id) {
+  this.food_id = opt_food_id;
+};
+rocket.inherits(layer.edit_food, layer);
+layer.edit_food.prototype.render_contents = function(parent) {
+  var container = $.createElement('div');
+  if (this.food_id) {
+    this.render_edit(container);
+  } else {
+    this.render_foods(container);
   }
-  table.tds[1].appendChild(select);
+  parent.appendChild(container);
+};
+layer.edit_food.prototype.food_click_handler = function(food_id) {
+  go('edit_' + this.data.food[food_id].type, food_id);
+};
+layer.edit_food.prototype.render_edit = function(parent) {
+  var container = $.createElement('div');
+  var table = $.table(2);
+  this.render_fat_carbohydrates_fiber_protein(table.tds[0]);
+  this.render_points(table.tds[1]);
+  container.appendChild(table);
+  this.render_name(container);
+  this.render_quantity_units(container);
+  this.render_delete_update(container);
+  this.render_image(container);
+  parent.appendChild(container);
+
+  var food = this.data.food[this.food_id];
+  this.fat.value(+food.fat);
+  this.carbohydrates.value(+food.carbohydrates);
+  this.fiber.value(+food.fiber);
+  this.protein.value(+food.protein);
+  this.name.value(food.name);
+  this.quantity.value(+food.quantity);
+  this.units.value(food.units);
+
+  this.fat.dispatchEvent('blur');
+};
+layer.edit_food.prototype.render_complete = function() {
+  layer.prototype.render_complete.apply(this, arguments);
+  if (
+    (this.data) &&
+    (this.food_id) &&
+    (this.data.food[this.food_id].user_id != this.data.user.user_id) &&
+    (this.data.user.user_id != 1)
+  ) {
+    alert('You can only edit food you have created');
+    go('edit_food');
+  }
+};
+layer.edit_food.prototype.render_delete_update = function(parent) {
+  var container = $.createElement('div').style({
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
+  });
+  var table = $.table(2);
+  var self = this;
+  var loading = false;
+  var button = $.createElement('button').innerHTML(
+    'Delete'
+  ).addEventListener('click', function() {
+    if (!loading) {
+      for (var track_id in self.data.track) {
+        var track = self.data.track[track_id];
+        if (track.food_id == self.food_id) {
+          alert(
+            'You can not delete a food you have tracked (on ' +
+              track.date.split('-')[1] + '/' +
+              track.date.split('-')[2] + '/' +
+              track.date.split('-')[0] +
+            ')'
+          );
+          return;
+        }
+      }
+      loading = true;
+      api('food', 'delete', self.food_id, function() {
+        delete self.data.food[self.food_id];
+        go('edit_food');
+      });
+    }
+  });
+  table.tds[0].appendChild(button);
+  var button = $.createElement('button').innerHTML(
+    'Update'
+  ).addEventListener('click', function(food_id) {
+    if (!loading) {
+      loading = true;
+      var args = self.get_food_arguments();
+      api('food', 'update', {'food_id': self.food_id, 'attributes': args}, function() {
+        $.extend(self.data.food[self.food_id], args);
+        go('edit_food');
+      });
+    }
+  });
+  table.tds[1].appendChild(button);
   container.appendChild(table);
   parent.appendChild(container);
 };
-layer.quick_create.prototype.get_args = function() {
-  return {
-    'name': this.name.value(),
-    'points': this.points.value(),
-    'type': 'food',
-    'fat': 0,
-    'carbohydrates': 0,
-    'fiber': 0,
-    'protein': 0,
-    'quantity': this.quantity.value(),
-    'units': this.units.value(),
-    'user_id': this.data.user.user_id
-  };
-};
-layer.quick_create.prototype.points_select_handler = function() {};
+
+
+
+
+
 
 
 
 
 
 layer.update_weight = function() {};
-rocket.inherits(layer.update_weight, layer.food);
-layer.update_weight.prototype.render_loaded = function(parent) {
+rocket.inherits(layer.update_weight, layer);
+layer.update_weight.prototype.render_contents = function(parent) {
+  $('body').style({
+    'background-color': light_gray
+  });
   var container = $.createElement('div');
-  this.contents_container = container;
-  this.render_header(container);
-  this.render_weight(container);
   this.render_update_weight(container);
   parent.appendChild(container);
 };
+layer.update_weight.prototype.render_update_weight = function(parent) {
+  var container = $.createElement('div');
+  this.render_weight(container);
+  this.render_update_weight_button(container);
+  parent.appendChild(container);
+};
 layer.update_weight.prototype.render_weight = function(parent) {
+  parent.appendChild($.createElement('div').style({
+    'height': 30
+  }));
   var container = $.createElement('div').style({
-    'padding-top': 5
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
   });
-  var table = $.table(3);
-  var select = $.createElement('select').style(this.select_style);
+  var table = $.table(2);
+  var select = $.createElement('select').style({
+    'direction': 'rtl'
+  });
   this.weight_pounds = select;
   for (var i = 120; i < 300; ++i) {
     select.appendChild($.createElement('option').innerHTML(i));
   }
   select.value(Math.floor(this.data.user.weight));
   table.tds[0].appendChild(select);
-  table.tds[1].style({
-    'width': 10,
-    'text-align': 'center',
-    'font-size': 24
-  }).innerHTML('.');
-  var select = $.createElement('select').style(this.select_style);
+  var select = $.createElement('select');
   this.weight_tenths = select;
   for (var i = 0; i < 10; ++i) {
-    select.appendChild($.createElement('option').value(i / 10).innerHTML(i));
+    select.appendChild($.createElement('option').value(i / 10).innerHTML('.' + i));
   }
   select.value($.round(this.data.user.weight - Math.floor(this.data.user.weight), 1));
-  table.tds[2].appendChild(select);
+  table.tds[1].appendChild(select);
   container.appendChild(table);
   parent.appendChild(container);
 };
-layer.update_weight.prototype.render_update_weight = function(parent) {
+layer.update_weight.prototype.render_update_weight_button = function(parent) {
   var container = $.createElement('div').style({
-    'margin-top': 5
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
   });
   var self = this;
   var loading = false;
   var button = $.createElement('button').style(this.button_style).innerHTML(
-    'UPDATE WEIGHT'
+    'Update Weight'
   ).addEventListener('click', function() {
     if (!loading) {
       loading = true;
@@ -1647,127 +1740,84 @@ layer.update_weight.prototype.render_update_weight = function(parent) {
 
 
 
-layer.edit_food = function(opt_food_id) {
-  this.food_id = opt_food_id;
-};
-rocket.inherits(layer.edit_food, layer.food_search);
-layer.edit_food.prototype.this_class_name = 'edit_food';
-layer.edit_food.prototype.render_loaded = function(parent) {
+
+
+
+layer.quick_create = function() {};
+rocket.inherits(layer.quick_create, layer.create_food);
+layer.quick_create.prototype.render_contents = function(parent) {
   var container = $.createElement('div');
-  this.contents_container = container;
-  this.render_header(container);
-  if (this.food_id) {
-    this.render_edit(container);
-  } else {
-    this.render_foods(container);
-  }
+  this.render_points(container);
+  this.render_name(container);
+  this.render_quantity_units(container);
+  this.render_create_create_track(container);
+  this.render_image(container);
   parent.appendChild(container);
 };
-layer.edit_food.prototype.render_edit = function(parent) {
-  var container = $.createElement('div');
-  var food = this.data.food[this.food_id];
-  this.img = food.img;
-  this.img_rotation = food.img_rotation;
-  this.render_food_fields(container);
-  this.fat.value(+food.fat);
-  this.carbohydrates.value(+food.carbohydrates);
-  this.fiber.value(+food.fiber);
-  this.protein.value(+food.protein);
-  this.name.value(food.name);
-  this.quantity.value(+food.quantity);
-  this.units.value(food.units);
-  this.points_select_handler();
-  parent.appendChild(container);
-};
-layer.edit_food.prototype.render_save_buttons = function(parent) {
+layer.quick_create.prototype.render_points = function(parent) {
   var container = $.createElement('div').style({
-    'margin-top': 5
+    'padding-top': 10
   });
-  var table = $.table(2);
-  var self = this;
-  var loading = false;
-  var button = $.createElement('button').style(this.button_style).innerHTML(
-    'DELETE'
-  ).addEventListener('click', function() {
-    if (!loading) {
-      for (var track_id in self.data.track) {
-        var track = self.data.track[track_id];
-        if (track.food_id == self.food_id) {
-          alert(
-            'You can not delete a food you have tracked (on ' +
-              track.date.split('-')[1] + '/' +
-              track.date.split('-')[2] + '/' +
-              track.date.split('-')[0] +
-            ')'
-          );
-          return;
-        }
-      }
-      loading = true;
-      api('food', 'delete', self.food_id, function() {
-        delete self.data.food[self.food_id];
-        go('edit_food');
-      });
-    }
+  var table = $.table(2).style({
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray,
+    'background-color': 'white'
   });
-  table.tds[0].appendChild(button);
-  var button = $.createElement('button').style(this.button_style).innerHTML(
-    'UPDATE'
-  ).addEventListener('click', function(food_id) {
-    if (!loading) {
-      loading = true;
-      var args = self.get_args();
-      api('food', 'update', {'food_id': self.food_id, 'attributes': args}, function() {
-        $.extend(self.data.food[self.food_id], args);
-        go('edit_food');
-      });
-    }
-  });
-  table.tds[1].appendChild(button);
+  table.tds[0].style({
+    'padding-left': 10
+  }).setAttribute({
+    'width': 50
+  }).innerHTML('Points');
+  var select = $.createElement('select');
+  this.points = select;
+  for (var i = 0; i < 100; ++i) {
+    select.appendChild($.createElement('option').innerHTML(i));
+  }
+  table.tds[1].appendChild(select);
   container.appendChild(table);
   parent.appendChild(container);
 };
-layer.edit_food.prototype.render_complete = function() {
-  layer.edit_food.prototype.superClass_.render_complete.apply(this, arguments);
-  if (
-    (this.data) &&
-    (this.food_id) &&
-    (this.data.food[this.food_id].user_id != this.data.user.user_id) &&
-    (this.data.user.user_id != 1)
-  ) {
-    alert('You can only edit food you have created');
-    go('edit_food');
-  }
+layer.quick_create.prototype.get_food_arguments = function() {
+  return {
+    'name': this.name.value(),
+    'type': 'food',
+    'points': this.points.value(),
+    'quantity': this.quantity.value(),
+    'units': this.units.value(),
+    'user_id': this.data.user.user_id,
+    'img': this.img,
+    'img_rotation': this.img_rotation
+  };
 };
+
+
+
+
 
 
 
 
 layer.create_activity = function() {};
 rocket.inherits(layer.create_activity, layer.quick_create);
-layer.create_activity.prototype.get_args = function() {
+layer.create_activity.prototype.render_contents = function(parent) {
+  var container = $.createElement('div');
+  this.render_points(container);
+  this.render_name(container);
+  this.render_quantity_units(container);
+  this.units.value('hour');
+  this.render_create_create_track(container);
+  parent.appendChild(container);
+};
+layer.create_activity.prototype.get_food_arguments = function() {
   return {
     'name': this.name.value(),
-    'points': -1 * this.points.value(),
     'type': 'activity',
-    'fat': 0,
-    'carbohydrates': 0,
-    'fiber': 0,
-    'protein': 0,
+    'points': -1 * this.points.value(),
     'quantity': this.quantity.value(),
     'units': this.units.value(),
     'user_id': this.data.user.user_id
   };
 };
-layer.create_activity.prototype.render_units_value = function() {
-  this.units.value('hour');
-};
-
-
-
-
-
-
 
 
 
