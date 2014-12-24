@@ -526,9 +526,7 @@ layer.prototype.render_quantity = function(table) {
 };
 layer.prototype.render_quantity_whole = function(parent) {
   var container = $.createElement('div');
-  var select = $.createElement('select').style({
-    'direction': 'rtl'
-  });
+  var select = $.createElement('select');
   this.quantity_whole = select;
   for (var i = 0; i < 300; ++i) {
     select.appendChild($.createElement('option').value(i).innerHTML(i));
@@ -594,9 +592,7 @@ layer.prototype.render_date_time = function(parent) {
 };
 layer.prototype.render_date = function(parent) {
   var container = $.createElement('div');
-  var select = $.createElement('select').style({
-    'direction': 'rtl'
-  });
+  var select = $.createElement('select');
   this.date = select;
   var date = new Date();
   for (var i = 0; i < 30; ++i) {
@@ -1279,6 +1275,14 @@ layer.menu.prototype.render_menu_items = function(parent) {
       'name': 'Update Weight',
       'go': 'update_weight'
     },
+    {
+      'name': 'Update Height',
+      'go': 'update_height'
+    },
+    {
+      'name': 'Update Password',
+      'go': 'update_password'
+    },
     'spacer',
     {
       'name': 'Logout',
@@ -1686,9 +1690,7 @@ layer.update_weight.prototype.render_weight = function(parent) {
     'border-bottom': '1px solid ' + gray
   });
   var table = $.table(2);
-  var select = $.createElement('select').style({
-    'direction': 'rtl'
-  });
+  var select = $.createElement('select');
   this.weight_pounds = select;
   for (var i = 120; i < 300; ++i) {
     select.appendChild($.createElement('option').innerHTML(i));
@@ -1730,6 +1732,153 @@ layer.update_weight.prototype.render_update_weight_button = function(parent) {
         self.data.user.weight = weight;
         self.update_data();
         go('home');
+      });
+    }
+  });
+  container.appendChild(button);
+  parent.appendChild(container);
+};
+
+
+
+
+
+
+
+
+
+layer.update_height = function() {};
+rocket.inherits(layer.update_height, layer);
+layer.update_height.prototype.render_contents = function(parent) {
+  $('body').style({
+    'background-color': light_gray
+  });
+  var container = $.createElement('div');
+  this.render_update_height(container);
+  parent.appendChild(container);
+};
+layer.update_height.prototype.render_update_height = function(parent) {
+  var container = $.createElement('div');
+  this.render_height(container);
+  this.render_update_height_button(container);
+  parent.appendChild(container);
+};
+layer.update_height.prototype.render_height = function(parent) {
+  parent.appendChild($.createElement('div').style({
+    'height': 30
+  }));
+  var container = $.createElement('div').style({
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
+  });
+  var select = $.createElement('select');
+  this.height = select;
+  for (var i = 48; i <= 84; ++i) {
+    select.appendChild($.createElement('option').value(i).innerHTML(
+      i + '" (' + Math.floor(i / 12) + ' ft ' + (i % 12) + ' in)'
+    ));
+  }
+  select.value(Math.floor(this.data.user.height));
+  container.appendChild(select);
+  parent.appendChild(container);
+};
+layer.update_height.prototype.render_update_height_button = function(parent) {
+  var container = $.createElement('div').style({
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
+  });
+  var self = this;
+  var loading = false;
+  var button = $.createElement('button').style(this.button_style).innerHTML(
+    'Update Height'
+  ).addEventListener('click', function() {
+    if (!loading) {
+      loading = true;
+      api('user', 'update_height', {
+        'user_id': self.data.user.user_id,
+        'height': self.height.value()
+      }, function() {
+        self.data.user.height = self.height.value();
+        self.update_data();
+        go('home');
+      });
+    }
+  });
+  container.appendChild(button);
+  parent.appendChild(container);
+};
+
+
+
+
+
+
+
+
+
+
+layer.update_password = function() {};
+rocket.inherits(layer.update_password, layer);
+layer.update_password.prototype.render_contents = function(parent) {
+  $('body').style({
+    'background-color': light_gray
+  });
+  var container = $.createElement('div');
+  this.render_update_password(container);
+  parent.appendChild(container);
+};
+layer.update_password.prototype.render_update_password = function(parent) {
+  var container = $.createElement('div');
+  var passwords_container = $.createElement('div').style({
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray
+  });
+  this.render_password(passwords_container, 'old');
+  this.render_password(passwords_container, 'new');
+  this.render_password(passwords_container, 'confirm');
+  this.render_update_password_button(passwords_container);
+  container.appendChild(passwords_container);
+  parent.appendChild(container);
+};
+layer.update_password.prototype.render_password = function(parent, type) {
+  var container = $.createElement('div').style({
+    'border-bottom': '1px solid ' + gray
+  });
+  var input = $.createElement('input');
+  this[type + '_password'] = input;
+  input.setAttribute({
+    'type': 'password',
+    'placeholder': type.substr(0, 1).toUpperCase() + type.substr(1) + ' Password'
+  });
+  container.appendChild(input);
+  parent.appendChild(container);
+};
+layer.update_password.prototype.render_update_password_button = function(parent) {
+  var container = $.createElement('div').style({
+    'margin-top': 10,
+    'border-top': '1px solid ' + gray,
+    'border-bottom': '1px solid ' + gray
+  });
+  var self = this;
+  var loading = false;
+  var button = $.createElement('button').style(this.button_style).innerHTML(
+    'Update Password'
+  ).addEventListener('click', function() {
+    if (!loading) {
+      loading = true;
+      api('user', 'update_password', {
+        'old_password': self.old_password.value(),
+        'new_password': self.new_password.value(),
+        'confirm_password': self.confirm_password.value()
+      }, function(updated) {
+        if (updated) {
+          go('home');
+        } else {
+          loading = false;
+          alert('Password Update Failed');
+          self.render();
+        }
       });
     }
   });

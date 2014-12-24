@@ -2,8 +2,6 @@
 
 ob_start('ob_gzhandler');
 
-define('DECIMALS', 0);
-
 date_default_timezone_set('America/Indiana/Indianapolis');
 
 if ($_POST) {
@@ -194,7 +192,7 @@ class api {
 }
 
 class user extends api {
-  public function login($arguments) {
+  private function verify_credentials($arguments) {
     $query = '
       select
         *
@@ -204,7 +202,10 @@ class user extends api {
         username = "' . $this->mysqli->real_escape_string($arguments['username']) . '" and
         password = sha1(concat(uuid, "' . $this->mysqli->real_escape_string($arguments['password']) . '"))';
     $result = $this->mysqli->query($query);
-    if ($row = $result->fetch_assoc()) {
+    return $result->fetch_assoc();
+  }
+  public function login($arguments) {
+    if ($row = $this->verify_credentials($arguments)) {
       $query = 'insert into session (user_id,`key`) values (' . $row['user_id'] . ', sha1(concat(uuid(), now())))';
       $result = $this->mysqli->query($query);
       $query = 'select * from session where session_id = ' . $this->mysqli->insert_id . '';
@@ -215,10 +216,36 @@ class user extends api {
       return null;
     }
   }
-  public function load($date) {
+  public function resume() {
     $query = 'select * from session where `key` = "' . $this->mysqli->real_escape_string($_REQUEST['key']) . '"';
     $result = $this->mysqli->query($query);
-    if ($row = $result->fetch_assoc()) {
+    return $result->fetch_assoc();
+  }
+  public function update_password($arguments) {
+    if ($row = $this->resume()) {
+      $query = 'select * from user where user_id = ' . $row['user_id'] . '';
+      $result = $this->mysqli->query($query);
+      $row = $result->fetch_assoc();
+      if (
+        (trim($arguments['new_password'])) and
+        ($arguments['new_password'] === $arguments['confirm_password']) and
+        ($this->verify_credentials(array(
+          'username' => $row['username'],
+          'password' => $arguments['old_password'],
+        )))
+      ) {
+        $query = 'update user set password = sha1(concat(uuid,"' . $this->mysqli->real_escape_string($arguments['new_password']) . '")) where user_id = ' . $row['user_id'] . '';
+        $this->mysqli->query($query);
+        return true;
+      } else {
+        return null;
+      }
+    } else {
+      return null;
+    }
+  }
+  public function load($date) {
+    if ($row = $this->resume()) {
       $query = 'select * from user where user_id = ' . $row['user_id'] . '';
       $result = $this->mysqli->query($query);
       $row = $result->fetch_assoc();
@@ -251,9 +278,28 @@ class user extends api {
     $this->mysqli->query($query);
     return $weight_id;
   }
+  public function update_height($arguments) {
+    $query = '
+      update
+        user
+      set
+        height = ' . floatval($arguments['height']) . '
+      where
+        user_id = ' . intval($arguments['user_id']) . '
+    ';
+    $this->mysqli->query($query);
+    return true;
+  }
 }
 
 class crud extends api {
+  public function __construct() {
+    parent::__construct();
+    $user = new user();
+    if (!$user->resume()) {
+      throw new Exception('You are not logged in!');
+    }
+  }
   public function select_id($attributes) {
     return $this->mysqli->select_id(
       $this->class,
